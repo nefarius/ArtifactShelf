@@ -1,4 +1,4 @@
-# ArtifactShelf — Artifact Browser
+# <img src="assets/NSS-Vibe.png" height="160" align="left" />ArtifactShelf
 
 A containerized, **read-only**, [h5ai](https://larsjung.de/h5ai/)-inspired file browser for exposing a
 directory of build artifacts, releases, or documentation over HTTP. Built with **.NET 10**, an
