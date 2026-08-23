@@ -1,0 +1,49 @@
+# Example Docker Compose deployment for the Artifact Browser.
+#
+# Copy this file to `compose.yml` (or `docker-compose.yml`) and adjust the
+# volume paths, hostname, and Traefik labels for your environment before use.
+#
+#   docker compose -f compose.example.yml up -d --build
+#
+services:
+  artifact-browser:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: artifact-browser:latest
+    restart: unless-stopped
+    environment:
+      # Container-internal paths; do not change unless you also change the volumes below.
+      ArtifactBrowser__ContentRoot: /data
+      ArtifactBrowser__CacheRoot: /cache
+      TZ: Etc/UTC
+    volumes:
+      # The artifact tree is mounted read-only; the app never writes to it.
+      - /srv/artifacts:/data:ro
+      # Thumbnails are cached here; must be writable by the container's non-root user (UID 1654).
+      - artifact-browser-cache:/cache
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--max-time", "3", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    labels:
+      # Traefik reverse-proxy configuration, following the same conventions used for
+      # other services behind buildbot.nefarius.at. Adjust the router name, host rule,
+      # entrypoint, and cert resolver to match your Traefik instance.
+      traefik.enable: "true"
+      traefik.http.routers.artifact-browser.rule: "Host(`artifacts.example.com`)"
+      traefik.http.routers.artifact-browser.entrypoints: "websecure"
+      traefik.http.routers.artifact-browser.tls: "true"
+      traefik.http.routers.artifact-browser.tls.certresolver: "letsencrypt"
+      traefik.http.services.artifact-browser.loadbalancer.server.port: "8080"
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true
+
+volumes:
+  artifact-browser-cache:

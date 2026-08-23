@@ -1,0 +1,29 @@
+@namespace ArtifactBrowser.Client.Components
+
+<span class="file-icon file-icon--@(CssClass)" aria-hidden="true">
+    @if (Entry.IsDirectory)
+    {
+        <svg viewBox="0 0 24 24" focusable="false"><path d="M10 4H2v16h20V6H12l-2-2z"/></svg>
+    }
+    else
+    {
+        <svg viewBox="0 0 24 24" focusable="false"><path d="M6 2h9l5 5v15H6V2z"/><path class="fold" d="M15 2v5h5"/></svg>
+        <span class="file-icon__ext">@Label</span>
+    }
+</span>
+
+@code {
+    [Parameter, EditorRequired]
+    public FileEntryDto Entry { get; set; } = null!;
+
+    private string CssClass => Entry.IsDirectory ? "folder" : Entry.MediaCategory.ToString().ToLowerInvariant();
+
+    private string Label
+    {
+        get
+        {
+            var ext = Entry.Extension.TrimStart('.');
+            return ext.Length is 0 or > 4 ? ext[..Math.Min(ext.Length, 3)] : ext;
+        }
+    }
+}

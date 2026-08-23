@@ -1,0 +1,104 @@
+@namespace ArtifactBrowser.Client.Components
+@using ArtifactBrowser.Client.Services
+@inject FilesApiClient Api
+
+<li class="tree-node" role="treeitem" aria-expanded="@Expanded.ToString().ToLowerInvariant()">
+    <div class="tree-node__row @(IsActive ? "is-active" : "")">
+        @if (Node.HasChildren)
+        {
+            <button type="button" class="tree-node__toggle" aria-label="@(Expanded ? "Collapse" : "Expand") @Node.Name" @onclick="ToggleAsync">
+                <svg viewBox="0 0 24 24" class="@(Expanded ? "is-open" : "")" focusable="false"><path d="M8 5l8 7-8 7z"/></svg>
+            </button>
+        }
+        else
+        {
+            <span class="tree-node__toggle tree-node__toggle--spacer"></span>
+        }
+        <button type="button" class="tree-node__label" @onclick="() => OnNavigate.InvokeAsync(Node.Path)">
+            <svg viewBox="0 0 24 24" class="tree-node__icon" focusable="false"><path d="M10 4H2v16h20V6H12l-2-2z"/></svg>
+            <span>@Node.Name</span>
+        </button>
+    </div>
+
+    @if (Expanded)
+    {
+        @if (Loading)
+        {
+            <div class="tree-node__loading">Loading…</div>
+        }
+        else if (Children is { Count: > 0 })
+        {
+            <ul role="group">
+                @foreach (var child in Children)
+                {
+                    <TreeNodeItem Node="child" CurrentPath="@CurrentPath" OnNavigate="OnNavigate" />
+                }
+            </ul>
+        }
+    }
+</li>
+
+@code {
+    [Parameter, EditorRequired]
+    public TreeNodeDto Node { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public string CurrentPath { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> OnNavigate { get; set; }
+
+    private bool Expanded { get; set; }
+    private bool Loading { get; set; }
+    private List<TreeNodeDto>? Children { get; set; }
+    private bool IsActive => string.Equals(Node.Path, CurrentPath, StringComparison.OrdinalIgnoreCase);
+
+    protected override void OnInitialized()
+    {
+        if (Node.Children.Count > 0)
+        {
+            Children = Node.Children;
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Auto-expand ancestors of the currently active path so the tree reveals the current folder.
+        if (!Expanded && Node.HasChildren && CurrentPath.StartsWith(Node.Path, StringComparison.OrdinalIgnoreCase) &&
+            (Node.Path.Length == 0 || CurrentPath.Length > Node.Path.Length))
+        {
+            _ = ExpandAsync();
+        }
+    }
+
+    private async Task ToggleAsync()
+    {
+        if (Expanded)
+        {
+            Expanded = false;
+            return;
+        }
+
+        await ExpandAsync();
+    }
+
+    private async Task ExpandAsync()
+    {
+        if (Expanded || Loading)
+        {
+            return;
+        }
+
+        Expanded = true;
+        if (Children is null)
+        {
+            Loading = true;
+            StateHasChanged();
+            var result = await Api.GetTreeAsync(Node.Path);
+            Children = result?.Children ?? new List<TreeNodeDto>();
+            Loading = false;
+        }
+
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,36 @@
+@namespace ArtifactBrowser.Client.Components
+@using ArtifactBrowser.Client.Services
+@inject FilesApiClient Api
+
+<nav class="sidebar__tree" aria-label="Folder tree">
+    @if (_root is null)
+    {
+        <div class="sidebar__loading">Loading tree…</div>
+    }
+    else
+    {
+        <ul role="tree">
+            <TreeNodeItem Node="_rootNode" CurrentPath="@CurrentPath" OnNavigate="OnNavigate" />
+        </ul>
+    }
+</nav>
+
+@code {
+    [Parameter, EditorRequired]
+    public string CurrentPath { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> OnNavigate { get; set; }
+
+    private TreeNodeDto? _root;
+    private TreeNodeDto _rootNode = new() { Name = "root", Path = string.Empty, HasChildren = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _root = await Api.GetTreeAsync(string.Empty);
+        if (_root is not null)
+        {
+            _rootNode = new TreeNodeDto { Name = "root", Path = _root.Path, HasChildren = _root.HasChildren, Children = _root.Children };
+        }
+    }
+}

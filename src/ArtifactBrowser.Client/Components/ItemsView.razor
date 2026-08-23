@@ -1,0 +1,124 @@
+@namespace ArtifactBrowser.Client.Components
+@using ArtifactBrowser.Client.Services
+@using ArtifactBrowser.Client.Utilities
+@inject SelectionService Selection
+@inject FilesApiClient Api
+@implements IDisposable
+
+@if (SortedEntries.Count == 0)
+{
+    <div class="empty-state">
+        <p>This folder is empty@(HasFilter ? " or no items match your filter." : ".")</p>
+    </div>
+}
+else if (Preferences.ViewMode == ViewMode.Details)
+{
+    <table class="items-table" role="grid">
+        <thead>
+            <tr>
+                <th></th>
+                <th scope="col">Name</th>
+                <th scope="col">Size</th>
+                <th scope="col">Modified</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var entry in SortedEntries)
+            {
+                <tr class="items-table__row @(Selection.IsSelected(entry.Path) ? "is-selected" : "")"
+                    tabindex="0"
+                    @onclick="e => HandleClick(entry, e)" @ondblclick="() => Open(entry)">
+                    <td><FileIcon Entry="entry" /></td>
+                    <td>@entry.Name</td>
+                    <td class="items-table__size">@(entry.IsDirectory ? "" : FormatUtilities.FormatBytes(entry.Size))</td>
+                    <td class="items-table__date">@FormatUtilities.FormatDate(entry.Modified)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <div class="items-tiles items-tiles--@Preferences.ItemSize.ToString().ToLowerInvariant() items-tiles--@Preferences.ViewMode.ToString().ToLowerInvariant()">
+        @foreach (var entry in SortedEntries)
+        {
+            <div class="tile @(Selection.IsSelected(entry.Path) ? "is-selected" : "")" tabindex="0"
+                 @onclick="e => HandleClick(entry, e)" @ondblclick="() => Open(entry)" title="@entry.Name">
+                @if (Preferences.ViewMode == ViewMode.Icons && entry.MediaCategory == MediaCategory.Image)
+                {
+                    <img class="tile__thumb" src="@Api.GetThumbnailUrl(entry.Path)" alt="" loading="lazy" />
+                }
+                else
+                {
+                    <FileIcon Entry="entry" />
+                }
+                <span class="tile__name">@entry.Name</span>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public List<FileEntryDto> Entries { get; set; } = new();
+
+    [Parameter, EditorRequired]
+    public BrowserPreferences Preferences { get; set; } = null!;
+
+    [Parameter]
+    public string FilterText { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<FileEntryDto> OnOpen { get; set; }
+
+    private bool HasFilter => !string.IsNullOrWhiteSpace(FilterText);
+
+    private List<FileEntryDto> FilteredEntries => HasFilter
+        ? Entries.Where(e => e.Name.Contains(FilterText, StringComparison.OrdinalIgnoreCase)).ToList()
+        : Entries;
+
+    // Folders always sort before files; within each group, sort by the selected field/direction.
+    private List<FileEntryDto> SortedEntries => ApplySortDirection(FilteredEntries);
+
+    private List<FileEntryDto> ApplySortDirection(List<FileEntryDto> filtered)
+    {
+        IOrderedEnumerable<FileEntryDto> ordered = Preferences.SortField switch
+        {
+            SortField.Size => filtered.OrderBy(e => e.IsDirectory ? 0 : 1).ThenBy(e => e.Size ?? -1),
+            SortField.Modified => filtered.OrderBy(e => e.IsDirectory ? 0 : 1).ThenBy(e => e.Modified),
+            SortField.Type => filtered.OrderBy(e => e.IsDirectory ? 0 : 1).ThenBy(e => e.Extension, StringComparer.OrdinalIgnoreCase),
+            _ => filtered.OrderBy(e => e.IsDirectory ? 0 : 1).ThenBy(e => e.Name, NaturalSortComparer.Instance),
+        };
+
+        var result = ordered.ToList();
+        if (!Preferences.SortDescending)
+        {
+            return result;
+        }
+
+        var dirCount = result.Count(e => e.IsDirectory);
+        var dirs = result.Take(dirCount);
+        var files = Enumerable.Reverse(result.Skip(dirCount));
+        return dirs.Concat(files).ToList();
+    }
+
+    protected override void OnInitialized() => Selection.Changed += OnSelectionChanged;
+
+    private void OnSelectionChanged() => InvokeAsync(StateHasChanged);
+
+    private void HandleClick(FileEntryDto entry, MouseEventArgs e)
+    {
+        if (e.CtrlKey || e.MetaKey)
+        {
+            Selection.Toggle(entry.Path);
+        }
+        else
+        {
+            Selection.Select(entry.Path);
+        }
+    }
+
+    private Task Open(FileEntryDto entry) => OnOpen.InvokeAsync(entry);
+
+    public void Dispose() => Selection.Changed -= OnSelectionChanged;
+}

@@ -1,0 +1,133 @@
+@namespace ArtifactBrowser.Client.Components
+@using ArtifactBrowser.Client.Services
+@using Markdig
+@inject FilesApiClient Api
+
+<div class="preview-overlay" role="dialog" aria-modal="true" aria-label="Preview: @Entry.Name" @onclick="Close" @onkeyup="OnKeyUp" tabindex="-1" @ref="_overlayRef">
+    <div class="preview-dialog" @onclick:stopPropagation="true">
+        <header class="preview-dialog__header">
+            <h2 class="preview-dialog__title" title="@Entry.Name">@Entry.Name</h2>
+            <div class="preview-dialog__actions">
+                @if (CanGoPrevious)
+                {
+                    <button type="button" class="toolbar__btn" title="Previous" @onclick="() => Navigate(-1)">‹</button>
+                }
+                @if (CanGoNext)
+                {
+                    <button type="button" class="toolbar__btn" title="Next" @onclick="() => Navigate(1)">›</button>
+                }
+                <a class="toolbar__btn" href="@Api.GetRawUrl(Entry.Path, download: true)" download title="Download">⭳</a>
+                <button type="button" class="toolbar__btn" title="Close" @onclick="Close">✕</button>
+            </div>
+        </header>
+        <div class="preview-dialog__body">
+            @if (_loading)
+            {
+                <div class="preview-dialog__status">Loading preview…</div>
+            }
+            else if (_preview is null)
+            {
+                <div class="preview-dialog__status">Unable to load preview.</div>
+            }
+            else
+            {
+                switch (_preview.Kind)
+                {
+                    case PreviewKind.Markdown:
+                        <div class="preview-dialog__markdown">@((MarkupString)RenderMarkdown(_preview.Content ?? string.Empty))</div>
+                        break;
+                    case PreviewKind.Text:
+                        <pre class="preview-dialog__text">@_preview.Content</pre>
+                        break;
+                    case PreviewKind.Image:
+                        <img class="preview-dialog__image" src="@Api.GetRawUrl(Entry.Path)" alt="@Entry.Name" />
+                        break;
+                    case PreviewKind.Audio:
+                        <audio class="preview-dialog__media" controls src="@Api.GetRawUrl(Entry.Path)"></audio>
+                        break;
+                    case PreviewKind.Video:
+                        <video class="preview-dialog__media" controls src="@Api.GetRawUrl(Entry.Path)"></video>
+                        break;
+                    case PreviewKind.Pdf:
+                        <iframe class="preview-dialog__pdf" title="@Entry.Name" src="@Api.GetRawUrl(Entry.Path)"></iframe>
+                        break;
+                    case PreviewKind.TooLarge:
+                        <div class="preview-dialog__status">This file is too large to preview. <a href="@Api.GetRawUrl(Entry.Path, download: true)" download>Download it</a> instead.</div>
+                        break;
+                    default:
+                        <div class="preview-dialog__status">Preview is not available for this file type. <a href="@Api.GetRawUrl(Entry.Path, download: true)" download>Download it</a> instead.</div>
+                        break;
+                }
+
+                @if (_preview.Truncated && _preview.Kind is PreviewKind.Text or PreviewKind.Markdown)
+                {
+                    <p class="preview-dialog__truncated">Preview truncated — <a href="@Api.GetRawUrl(Entry.Path, download: true)" download>download the full file</a> to see everything.</p>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private static readonly MarkdownPipeline MarkdownPipelineInstance =
+        new MarkdownPipelineBuilder().DisableHtml().UseAdvancedExtensions().Build();
+
+    [Parameter, EditorRequired]
+    public FileEntryDto Entry { get; set; } = null!;
+
+    [Parameter]
+    public List<FileEntryDto> NavigableEntries { get; set; } = new();
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<FileEntryDto> OnNavigateEntry { get; set; }
+
+    private PreviewDto? _preview;
+    private bool _loading;
+    private ElementReference _overlayRef;
+
+    private int CurrentIndex => NavigableEntries.FindIndex(e => e.Path == Entry.Path);
+    private bool CanGoPrevious => CurrentIndex > 0;
+    private bool CanGoNext => CurrentIndex >= 0 && CurrentIndex < NavigableEntries.Count - 1;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadPreviewAsync();
+    }
+
+    private async Task LoadPreviewAsync()
+    {
+        _loading = true;
+        _preview = null;
+        StateHasChanged();
+        _preview = await Api.GetPreviewAsync(Entry.Path);
+        _loading = false;
+    }
+
+    private static string RenderMarkdown(string markdown) => Markdown.ToHtml(markdown, MarkdownPipelineInstance);
+
+    private Task Navigate(int direction)
+    {
+        var index = CurrentIndex + direction;
+        if (index < 0 || index >= NavigableEntries.Count)
+        {
+            return Task.CompletedTask;
+        }
+
+        return OnNavigateEntry.InvokeAsync(NavigableEntries[index]);
+    }
+
+    private Task Close() => OnClose.InvokeAsync();
+
+    private Task OnKeyUp(KeyboardEventArgs e) => e.Key switch
+    {
+        "Escape" => Close(),
+        "ArrowLeft" => Navigate(-1),
+        "ArrowRight" => Navigate(1),
+        _ => Task.CompletedTask,
+    };
+
+    public async ValueTask FocusAsync() => await _overlayRef.FocusAsync();
+}

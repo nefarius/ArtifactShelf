@@ -1,0 +1,209 @@
+﻿@page "/"
+@page "/{*Path}"
+@using ArtifactBrowser.Client.Services
+@inject FilesApiClient Api
+@inject PreferencesService Prefs
+@inject SelectionService Selection
+@inject DownloadService Downloads
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>@(CurrentPath.Length == 0 ? "Artifact Browser" : $"{System.IO.Path.GetFileName(CurrentPath)} — Artifact Browser")</PageTitle>
+
+<div class="app-shell">
+    <header class="app-header">
+        <h1 class="app-header__title">Artifact Browser</h1>
+    </header>
+
+    <Toolbar Preferences="Prefs.Preferences"
+             OnViewModeChanged="SetViewMode"
+             OnItemSizeChanged="SetItemSize"
+             OnSortChanged="SetSort"
+             FilterText="@_filterText"
+             OnFilterChanged="text => _filterText = text"
+             OnSearch="RunSearchAsync"
+             OnToggleSidebar="ToggleSidebar"
+             SelectedCount="Selection.Selected.Count"
+             OnDownloadSelected="DownloadSelectedAsync"
+             OnClearSelection="() => Selection.Clear()" />
+
+    <Breadcrumb CurrentPath="@CurrentPath" OnNavigate="NavigateTo" />
+
+    <div class="app-body">
+        @if (Prefs.Preferences.ShowSidebar)
+        {
+            <aside class="sidebar">
+                <FolderTree CurrentPath="@CurrentPath" OnNavigate="NavigateTo" />
+            </aside>
+        }
+
+        <main class="content" aria-live="polite">
+            @if (_loading)
+            {
+                <div class="loading-state">Loading…</div>
+            }
+            else if (_error is not null)
+            {
+                <div class="error-state">
+                    <p>@_error</p>
+                    <button type="button" class="toolbar__btn" @onclick="() => LoadAsync(CurrentPath)">Retry</button>
+                </div>
+            }
+            else if (_isSearching)
+            {
+                <p class="content__hint">
+                    @(_searchResults.Count) result(s) for "@_lastSearchQuery"@(_searchTruncated ? " (truncated)" : "")
+                    <button type="button" class="toolbar__btn" @onclick="ClearSearch">Back to folder</button>
+                </p>
+                <ItemsView Entries="_searchResults" Preferences="Prefs.Preferences" FilterText="" OnOpen="OpenEntryAsync" />
+            }
+            else
+            {
+                <ItemsView Entries="_entries" Preferences="Prefs.Preferences" FilterText="@_filterText" OnOpen="OpenEntryAsync" />
+            }
+        </main>
+
+        <MetadataPanel Entry="SelectedEntry" BuildDownloadUrl="p => Api.GetRawUrl(p, download: true)" />
+    </div>
+</div>
+
+@if (_previewEntry is not null)
+{
+    <PreviewDialog Entry="_previewEntry" NavigableEntries="PreviewableEntries" OnClose="ClosePreview" OnNavigateEntry="e => _previewEntry = e" />
+}
+
+@code {
+    [Parameter]
+    public string? Path { get; set; }
+
+    private string CurrentPath => (Path ?? string.Empty).Trim('/');
+
+    private List<FileEntryDto> _entries = new();
+    private bool _loading = true;
+    private string? _error;
+    private string _filterText = string.Empty;
+
+    private bool _isSearching;
+    private string _lastSearchQuery = string.Empty;
+    private List<FileEntryDto> _searchResults = new();
+    private bool _searchTruncated;
+
+    private FileEntryDto? _previewEntry;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Selection.Changed += OnSelectionChanged;
+        await Prefs.LoadAsync();
+        await LoadAsync(CurrentPath);
+    }
+
+    private void OnSelectionChanged() => InvokeAsync(StateHasChanged);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!_loading)
+        {
+            await LoadAsync(CurrentPath);
+        }
+    }
+
+    private async Task LoadAsync(string path)
+    {
+        _loading = true;
+        _error = null;
+        _isSearching = false;
+        Selection.Clear();
+        StateHasChanged();
+
+        try
+        {
+            var listing = await Api.ListDirectoryAsync(path);
+            _entries = listing?.Entries ?? new List<FileEntryDto>();
+        }
+        catch (Exception)
+        {
+            _error = "This folder could not be loaded. It may not exist or may not be accessible.";
+            _entries = new List<FileEntryDto>();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private FileEntryDto? SelectedEntry =>
+        Selection.Selected.Count == 1
+            ? (_isSearching ? _searchResults : _entries).FirstOrDefault(e => Selection.IsSelected(e.Path))
+            : null;
+
+    private List<FileEntryDto> PreviewableEntries => (_isSearching ? _searchResults : _entries).Where(e => !e.IsDirectory).ToList();
+
+    private async Task OpenEntryAsync(FileEntryDto entry)
+    {
+        if (entry.IsDirectory)
+        {
+            NavigateTo(entry.Path);
+        }
+        else
+        {
+            _previewEntry = entry;
+        }
+    }
+
+    private void ClosePreview() => _previewEntry = null;
+
+    private void NavigateTo(string path)
+    {
+        var target = string.IsNullOrEmpty(path) ? "/" : $"/{path}";
+        Nav.NavigateTo(target);
+    }
+
+    private Task SetViewMode(ViewMode mode) => Prefs.UpdateAsync(p => p.ViewMode = mode);
+
+    private Task SetItemSize(ItemSize size) => Prefs.UpdateAsync(p => p.ItemSize = size);
+
+    private Task SetSort((SortField Field, bool Descending) sort) => Prefs.UpdateAsync(p =>
+    {
+        p.SortField = sort.Field;
+        p.SortDescending = sort.Descending;
+    });
+
+    private Task ToggleSidebar() => Prefs.UpdateAsync(p => p.ShowSidebar = !p.ShowSidebar);
+
+    private async Task RunSearchAsync(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            ClearSearch();
+            return;
+        }
+
+        _lastSearchQuery = query;
+        var response = await Api.SearchAsync(CurrentPath, query, recursive: true);
+        _searchResults = response?.Results.Cast<FileEntryDto>().ToList() ?? new List<FileEntryDto>();
+        _searchTruncated = response?.Truncated ?? false;
+        _isSearching = true;
+        Selection.Clear();
+    }
+
+    private void ClearSearch()
+    {
+        _isSearching = false;
+        _searchResults = new List<FileEntryDto>();
+    }
+
+    private async Task DownloadSelectedAsync()
+    {
+        if (Selection.Selected.Count == 0)
+        {
+            return;
+        }
+
+        await Downloads.DownloadArchiveAsync(Api.GetArchiveUrl(), Selection.Selected.ToList());
+    }
+
+    public void Dispose()
+    {
+        Selection.Changed -= OnSelectionChanged;
+    }
+}
