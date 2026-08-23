@@ -2,6 +2,7 @@ using System.Threading.RateLimiting;
 using ArtifactBrowser.Components;
 using ArtifactBrowser.Features.Files;
 using ArtifactBrowser.Options;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.RateLimiting;
 using Nefarius.Utilities.AspNetCore;
@@ -19,6 +20,15 @@ builder.Services.AddRequestTimeouts(options =>
 {
     options.AddPolicy("files", TimeSpan.FromSeconds(Math.Max(1, requestTimeoutSeconds)));
 });
+
+// Persist Data Protection keys under CacheRoot (already a writable, volume-backed directory)
+// instead of the container's ephemeral home directory, so keys survive container recreation
+// and can be shared across replicas if the app is ever scaled out.
+var cacheRootForKeys = builder.Configuration.GetSection(ArtifactBrowserOptions.SectionName)
+    .GetValue(nameof(ArtifactBrowserOptions.CacheRoot), "/cache")!;
+builder.Services.AddDataProtection()
+    .SetApplicationName("ArtifactBrowser")
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(cacheRootForKeys, "dp-keys")));
 
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<PathGuard>();
