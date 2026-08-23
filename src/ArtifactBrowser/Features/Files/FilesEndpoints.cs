@@ -93,22 +93,12 @@ public static class FilesEndpoints
     /// </summary>
     public static IEndpointConventionBuilder MapDirectArtifactFiles(this IEndpointRouteBuilder app)
     {
-        var endpoint = app.MapMethods(
+        // Default Order so literal app routes (/health, /api/files/*) keep precedence over
+        // this catch-all. The artifactFile constraint still beats Home.razor's "/{*Path}".
+        return app.MapMethods(
             "/{**artifactPath:artifactFile}",
             new[] { HttpMethods.Get, HttpMethods.Head },
             (string artifactPath, bool? download, PathGuard pathGuard) =>
                 ArtifactFileResult.FromVirtualPath(artifactPath, download == true, pathGuard));
-
-        endpoint.Add(builder =>
-        {
-            if (builder is RouteEndpointBuilder routeEndpointBuilder)
-            {
-                // Win over Home.razor's "/{*Path}" when the constraint matches, but stay
-                // below MapStaticAssets (Order = int.MinValue) so framework scripts still win.
-                routeEndpointBuilder.Order = -1;
-            }
-        });
-
-        return endpoint;
     }
 }

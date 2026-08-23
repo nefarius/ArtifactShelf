@@ -29,6 +29,11 @@ public sealed class TempContentRoot : IDisposable
         File.WriteAllText(Path.Combine(ContentRoot, "builds", "v1", "build.log"), "build ok\n");
         File.WriteAllText(Path.Combine(ContentRoot, ".hidden-file.txt"), "should not be listed\n");
         File.WriteAllText(Path.Combine(ContentRoot, ".hidden-dir", "secret.txt"), "hidden\n");
+
+        // Colliding names that must not steal reserved application routes.
+        Directory.CreateDirectory(Path.Combine(ContentRoot, "api", "files"));
+        File.WriteAllText(Path.Combine(ContentRoot, "health"), "collision-health\n");
+        File.WriteAllText(Path.Combine(ContentRoot, "api", "files", "raw"), "collision-raw\n");
     }
 
     public IOptions<ArtifactBrowserOptions> CreateOptions(Action<ArtifactBrowserOptions>? configure = null)

@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json;
 using ArtifactBrowser.Client.Models;
 using ArtifactBrowser.Tests.TestSupport;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -38,6 +39,29 @@ public sealed class ApiIntegrationTests : IDisposable
         var response = await _client.GetAsync("/health");
 
         response.EnsureSuccessStatusCode();
+        var payload = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("healthy", payload.GetProperty("status").GetString());
+    }
+
+    [Fact]
+    public async Task Health_WhenReservedPathArtifactExists_StillReturnsHealthPayload()
+    {
+        var response = await _client.GetAsync("/health");
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("healthy", body);
+        Assert.DoesNotContain("collision-health", body);
+    }
+
+    [Fact]
+    public async Task Raw_WhenReservedPathArtifactExists_StillServesQueryPath()
+    {
+        var response = await _client.GetAsync("/api/files/raw?path=docs/notes.txt");
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("hello world\n", await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
