@@ -5,6 +5,11 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <!-- .NET 10 ships blazor.web.js via Microsoft.AspNetCore.App.Internal.Assets.
+         The SDK should pull that pack when .razor files exist, but newer SDKs
+         classify them as RazorComponent (not Content), so auto-detect stays false
+         and a Docker layered restore plus publish without restore omits the file. -->
+    <RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>
   </PropertyGroup>
 
   <ItemGroup>

@@ -10,10 +10,12 @@ COPY src/ArtifactBrowser.Client/ArtifactBrowser.Client.csproj src/ArtifactBrowse
 RUN dotnet restore src/ArtifactBrowser/ArtifactBrowser.csproj
 
 COPY src/ src/
+# Do not pass --no-restore: in .NET 10, blazor.web.js comes from a restore-time
+# pack (Microsoft.AspNetCore.App.Internal.Assets). A csproj-only restore before
+# source is copied can miss it, and publish --no-restore then ships no script.
 RUN dotnet publish src/ArtifactBrowser/ArtifactBrowser.csproj \
     -c Release \
     -o /app/publish \
-    --no-restore \
     /p:UseAppHost=false
 
 # --- Runtime stage -------------------------------------------------------------

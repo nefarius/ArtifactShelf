@@ -102,7 +102,20 @@ app.MapFilesEndpoints()
     .RequireRateLimiting("files")
     .WithRequestTimeout("files");
 
-app.MapStaticAssets();
+// MapStaticAssets() deliberately gives non-fingerprinted "logical" asset paths (e.g. the
+// unfingerprinted "_framework/blazor.web.js" referenced by App.razor) lower routing priority
+// than app-defined routes, so that a conventional route can intentionally shadow a static file.
+// Home.razor's "/{*Path}" catch-all (needed for deep-linking to arbitrary artifact paths, which
+// routinely contain dots, so ":nonfile" isn't an option) would otherwise win that priority contest
+// and swallow requests like "/_framework/blazor.web.js", serving the SPA shell (200 text/html)
+// instead of the actual script. Force static assets to the highest priority so they always win.
+app.MapStaticAssets().Add(endpointBuilder =>
+{
+    if (endpointBuilder is RouteEndpointBuilder routeEndpointBuilder)
+    {
+        routeEndpointBuilder.Order = int.MinValue;
+    }
+});
 app.MapRazorComponents<App>()
     .AddInteractiveWebAssemblyRenderMode()
     .AddAdditionalAssemblies(typeof(ArtifactBrowser.Client._Imports).Assembly);
