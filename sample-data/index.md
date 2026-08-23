@@ -1,14 +1,7 @@
-# Sample artifacts
+# Buildbot Archive
 
-This is the development content root. The listing above is the folder; this panel
-renders `index.md` when it is present.
+You're on the file server. This tree is a mirror of build artifacts spit out by CI (mostly AppVeyor) for the projects under [github.com/nefarius](https://github.com/nefarius). Upstream keeps those bits around for about a month, then they're gone — so they land here before that happens.
 
-- Nested folders for the sidebar and breadcrumbs
-- Markdown and text files for preview
-- This readme panel, driven only by `index.md`
+This is **not** the place for production-ready setups. Grab those from the [download hub](https://docs.nefarius.at/Downloads/). What's listed above is unsigned or test-signed, may already have been superseded, and will not work on a non-developer machine without the right preparations. Typically only of interest to developers or beta-testing folks — explore at your own risk 🦋
 
-```text
-sample-data/
-  docs/
-  index.md
-```
+The canonical disclaimer lives over on the docs: [Buildbot Archive](https://docs.nefarius.at/Downloads/#buildbot-archive).
