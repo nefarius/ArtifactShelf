@@ -93,6 +93,11 @@ app.UseHttpsRedirection();
 
 app.UseForwardedHeaders();
 app.UseAntiforgery();
+app.Use((context, next) =>
+{
+    ClientAbortToken.Capture(context);
+    return next();
+});
 app.UseRequestTimeouts();
 app.UseRateLimiter();
 
