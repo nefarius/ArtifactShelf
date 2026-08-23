@@ -1,5 +1,7 @@
+using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using ArtifactBrowser.Client.Models;
 using ArtifactBrowser.Tests.TestSupport;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -82,7 +84,12 @@ public sealed class ApiIntegrationTests : IDisposable
         var response = await _client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.PartialContent, response.StatusCode);
-        Assert.True(response.Content.Headers.ContentLength <= 4);
+        Assert.Equal(4, response.Content.Headers.ContentLength);
+        Assert.Equal(0, response.Content.Headers.ContentRange?.From);
+        Assert.Equal(3, response.Content.Headers.ContentRange?.To);
+
+        var body = await response.Content.ReadAsByteArrayAsync();
+        Assert.Equal(Encoding.UTF8.GetBytes("hell"), body);
     }
 
     [Fact]
@@ -129,6 +136,11 @@ public sealed class ApiIntegrationTests : IDisposable
 
         var bytes = await response.Content.ReadAsByteArrayAsync();
         Assert.True(bytes.Length > 0);
+
+        using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+        var readme = Assert.Single(archive.Entries, e => e.Name == "README.md");
+        using var reader = new StreamReader(readme.Open());
+        Assert.Equal("# Title\n\nSome **text**.\n", await reader.ReadToEndAsync());
     }
 
     public void Dispose()

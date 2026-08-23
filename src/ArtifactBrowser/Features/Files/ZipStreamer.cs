@@ -31,7 +31,9 @@ public sealed class ZipStreamer(PathGuard pathGuard, IOptions<ArtifactBrowserOpt
         {
             using var archive = new ZipArchive(destination, ZipArchiveMode.Create, leaveOpen: true);
             var tally = new ArchiveTally();
-            var seenRoots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var seenRoots = new HashSet<string>(OperatingSystem.IsWindows()
+                ? StringComparer.OrdinalIgnoreCase
+                : StringComparer.Ordinal);
 
             foreach (var virtualPath in virtualPaths)
             {

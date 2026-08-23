@@ -35,9 +35,22 @@ public sealed class FilesExceptionMiddleware(RequestDelegate next, ILogger<Files
                 await WriteError(context, StatusCodes.Status413PayloadTooLarge, "The requested archive is too large.");
             }
         }
+        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+        {
+            // Client disconnected; nothing to write back.
+        }
         catch (OperationCanceledException)
         {
-            // Client disconnected or the request timed out; nothing to write back.
+            // Request timeout (not a client abort). Let UseRequestTimeouts produce 504
+            // unless archive/raw headers have already started, in which case a 200 is
+            // unavoidable and aborting the connection is the safest signal.
+            if (context.Response.HasStarted)
+            {
+                context.Abort();
+                return;
+            }
+
+            throw;
         }
     }
 
