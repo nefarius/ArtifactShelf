@@ -8,9 +8,12 @@
     <ResourcePreloader />
     <link rel="stylesheet" href="@Assets["css/app.css"]" />
     <link rel="stylesheet" href="@Assets["ArtifactBrowser.styles.css"]" />
-    <title>Artifact Browser</title>
     <ImportMap />
     <HeadOutlet @rendermode="@RenderMode" />
+    @* HeadOutlet must not be the last head child. WASM patches it with insertBefore
+       against the next sibling; if that sibling is missing (or a browser extension
+       mutated the end of <head>), rendering throws and the error UI appears. *@
+    <title>Artifact Browser</title>
 </head>
 
 <body>
