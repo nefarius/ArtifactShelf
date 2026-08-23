@@ -1,0 +1,112 @@
+@namespace ArtifactBrowser.Client.Components
+@using ArtifactBrowser.Client.Services
+
+<div class="toolbar" role="toolbar" aria-label="Browser toolbar">
+    <button type="button" class="toolbar__btn" title="Toggle sidebar" @onclick="() => OnToggleSidebar.InvokeAsync()">
+        <svg viewBox="0 0 24 24" focusable="false"><path d="M3 4h18v2H3zM3 11h18v2H3zM3 18h18v2H3z"/></svg>
+    </button>
+
+    <div class="toolbar__group" role="group" aria-label="View mode">
+        @foreach (var mode in Enum.GetValues<ViewMode>())
+        {
+            <button type="button" class="toolbar__btn @(Preferences.ViewMode == mode ? "is-active" : "")"
+                    title="@mode view" @onclick="() => SetViewMode(mode)">
+                @mode.ToString()[..1]
+            </button>
+        }
+    </div>
+
+    @if (Preferences.ViewMode != ViewMode.Details)
+    {
+        <div class="toolbar__group" role="group" aria-label="Item size">
+            @foreach (var size in Enum.GetValues<ItemSize>())
+            {
+                <button type="button" class="toolbar__btn @(Preferences.ItemSize == size ? "is-active" : "")"
+                        title="@size size" @onclick="() => SetItemSize(size)">
+                    @size.ToString()[..1]
+                </button>
+            }
+        </div>
+    }
+
+    <select class="toolbar__select" value="@Preferences.SortField" @onchange="OnSortFieldChanged" aria-label="Sort by">
+        @foreach (var field in Enum.GetValues<SortField>())
+        {
+            <option value="@field">@field</option>
+        }
+    </select>
+
+    <button type="button" class="toolbar__btn" title="Toggle sort direction" @onclick="ToggleSortDirection">
+        @(Preferences.SortDescending ? "↓" : "↑")
+    </button>
+
+    <input class="toolbar__input" placeholder="Filter this folder…" value="@FilterText"
+           @oninput="e => OnFilterChanged.InvokeAsync((string?)e.Value ?? string.Empty)" aria-label="Filter current folder" />
+
+    <div class="toolbar__search">
+        <input class="toolbar__input" placeholder="Search recursively…" value="@SearchText"
+               @oninput="e => SearchText = (string?)e.Value ?? string.Empty"
+               @onkeyup="OnSearchKeyUp" aria-label="Recursive search" />
+        <button type="button" class="toolbar__btn" @onclick="Submit">Search</button>
+    </div>
+
+    @if (SelectedCount > 0)
+    {
+        <span class="toolbar__selection">@SelectedCount selected</span>
+        <button type="button" class="toolbar__btn" @onclick="() => OnDownloadSelected.InvokeAsync()">Download ZIP</button>
+        <button type="button" class="toolbar__btn" @onclick="() => OnClearSelection.InvokeAsync()">Clear</button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public BrowserPreferences Preferences { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback<ViewMode> OnViewModeChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<ItemSize> OnItemSizeChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<(SortField Field, bool Descending)> OnSortChanged { get; set; }
+
+    [Parameter]
+    public string FilterText { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> OnFilterChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnSearch { get; set; }
+
+    [Parameter]
+    public EventCallback OnToggleSidebar { get; set; }
+
+    [Parameter]
+    public int SelectedCount { get; set; }
+
+    [Parameter]
+    public EventCallback OnDownloadSelected { get; set; }
+
+    [Parameter]
+    public EventCallback OnClearSelection { get; set; }
+
+    private string SearchText { get; set; } = string.Empty;
+
+    private Task SetViewMode(ViewMode mode) => OnViewModeChanged.InvokeAsync(mode);
+
+    private Task SetItemSize(ItemSize size) => OnItemSizeChanged.InvokeAsync(size);
+
+    private Task OnSortFieldChanged(ChangeEventArgs e)
+    {
+        var field = Enum.Parse<SortField>((string)e.Value!);
+        return OnSortChanged.InvokeAsync((field, Preferences.SortDescending));
+    }
+
+    private Task ToggleSortDirection() => OnSortChanged.InvokeAsync((Preferences.SortField, !Preferences.SortDescending));
+
+    private Task OnSearchKeyUp(KeyboardEventArgs e) => e.Key == "Enter" ? Submit() : Task.CompletedTask;
+
+    private Task Submit() => OnSearch.InvokeAsync(SearchText);
+}

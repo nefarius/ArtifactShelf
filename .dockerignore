@@ -1,0 +1,17 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+**/.idea/
+**/node_modules/
+**/*.user
+.git/
+.gitignore
+.cache/
+sample-data/
+tests/
+README.md
+LICENSE
+compose.example.yml
+Dockerfile
+.dockerignore

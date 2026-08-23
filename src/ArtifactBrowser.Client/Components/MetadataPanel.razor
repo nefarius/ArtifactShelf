@@ -1,0 +1,45 @@
+@namespace ArtifactBrowser.Client.Components
+@using ArtifactBrowser.Client.Utilities
+
+<aside class="metadata-panel" aria-label="Item details">
+    @if (Entry is null)
+    {
+        <p class="metadata-panel__empty">Select an item to see its details.</p>
+    }
+    else
+    {
+        <div class="metadata-panel__icon"><FileIcon Entry="Entry" /></div>
+        <h2 class="metadata-panel__name" title="@Entry.Name">@Entry.Name</h2>
+        <dl class="metadata-panel__list">
+            <dt>Type</dt>
+            <dd>@(Entry.IsDirectory ? "Folder" : Entry.MediaCategory.ToString())</dd>
+
+            @if (!Entry.IsDirectory)
+            {
+                <dt>Size</dt>
+                <dd>@FormatUtilities.FormatBytes(Entry.Size)</dd>
+            }
+
+            <dt>Modified</dt>
+            <dd>@FormatUtilities.FormatDate(Entry.Modified)</dd>
+
+            <dt>Path</dt>
+            <dd class="metadata-panel__path">/@Entry.Path</dd>
+        </dl>
+
+        @if (!Entry.IsDirectory)
+        {
+            <a class="metadata-panel__download" href="@DownloadUrl" download>Download</a>
+        }
+    }
+</aside>
+
+@code {
+    [Parameter]
+    public FileEntryDto? Entry { get; set; }
+
+    [Parameter, EditorRequired]
+    public Func<string, string> BuildDownloadUrl { get; set; } = _ => string.Empty;
+
+    private string DownloadUrl => Entry is null ? string.Empty : BuildDownloadUrl(Entry.Path);
+}

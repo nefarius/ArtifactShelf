@@ -1,0 +1,27 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <ResourcePreloader />
+    <link rel="stylesheet" href="@Assets["css/app.css"]" />
+    <link rel="stylesheet" href="@Assets["ArtifactBrowser.styles.css"]" />
+    <title>Artifact Browser</title>
+    <ImportMap />
+    <HeadOutlet @rendermode="@RenderMode" />
+</head>
+
+<body>
+    <Routes @rendermode="@RenderMode" />
+    <script src="@Assets["_framework/blazor.web.js"]"></script>
+</body>
+
+@code {
+    // The browser owns all UI state; server-side prerendering is disabled so that page
+    // components (which depend on WASM-only services) never execute on the server.
+    private static readonly IComponentRenderMode RenderMode = new InteractiveWebAssemblyRenderMode(prerender: false);
+}
+
+</html>
