@@ -145,6 +145,18 @@ public sealed class ApiIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task PrettyUrl_ExistingFile_HeadReturnsHeadersWithoutBody()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Head, "/docs/notes.txt");
+        var response = await _client.SendAsync(request);
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("text/plain", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(Encoding.UTF8.GetByteCount("hello world\n"), response.Content.Headers.ContentLength);
+        Assert.Empty(await response.Content.ReadAsByteArrayAsync());
+    }
+
+    [Fact]
     public async Task PrettyUrl_ExistingFile_SupportsRangeRequests()
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, "/docs/notes.txt");
@@ -166,9 +178,12 @@ public sealed class ApiIntegrationTests : IDisposable
     {
         var response = await _client.GetAsync("/docs");
 
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
         var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Artifact Browser", body);
+        Assert.Contains("blazor.web.js", body);
         Assert.NotEqual("hello world\n", body);
-        Assert.NotEqual("text/plain", response.Content.Headers.ContentType?.MediaType);
     }
 
     [Fact]
