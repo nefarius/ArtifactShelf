@@ -86,6 +86,7 @@
 
     private PreviewDto? _preview;
     private bool _loading;
+    private bool _didFocus;
     private ElementReference _overlayRef;
 
     private int CurrentIndex => NavigableEntries.FindIndex(e => e.Path == Entry.Path);
@@ -97,13 +98,32 @@
         await LoadPreviewAsync();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_didFocus)
+        {
+            _didFocus = true;
+            await _overlayRef.FocusAsync();
+        }
+    }
+
     private async Task LoadPreviewAsync()
     {
         _loading = true;
         _preview = null;
         StateHasChanged();
-        _preview = await Api.GetPreviewAsync(Entry.Path);
-        _loading = false;
+        try
+        {
+            _preview = await Api.GetPreviewAsync(Entry.Path);
+        }
+        catch (Exception)
+        {
+            _preview = null;
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private static string RenderMarkdown(string markdown) => Markdown.ToHtml(markdown, MarkdownPipelineInstance);

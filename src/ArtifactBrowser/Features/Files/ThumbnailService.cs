@@ -46,23 +46,18 @@ public sealed class ThumbnailService : IDisposable
         var sourceInfo = new FileInfo(resolved.PhysicalPath);
         var cachePath = GetCachePath(resolved.VirtualPath, sourceInfo.LastWriteTimeUtc);
 
-        if (File.Exists(cachePath))
+        if (TryGetFreshCachedThumbnail(cachePath, out var cached))
         {
-            var cacheInfo = new FileInfo(cachePath);
-            var age = DateTimeOffset.UtcNow - cacheInfo.LastWriteTimeUtc;
-            if (age.TotalDays <= _options.ThumbnailCacheMaxAgeDays)
-            {
-                return new ThumbnailResult(cachePath, cacheInfo.LastWriteTimeUtc);
-            }
+            return cached;
         }
 
         await _concurrencyLimiter.WaitAsync(cancellationToken);
         try
         {
             // Re-check after acquiring the slot in case another request already generated it.
-            if (File.Exists(cachePath))
+            if (TryGetFreshCachedThumbnail(cachePath, out cached))
             {
-                return new ThumbnailResult(cachePath, new FileInfo(cachePath).LastWriteTimeUtc);
+                return cached;
             }
 
             Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
@@ -93,7 +88,7 @@ public sealed class ThumbnailService : IDisposable
 
             return new ThumbnailResult(cachePath, DateTimeOffset.UtcNow);
         }
-        catch (UnknownImageFormatException)
+        catch (Exception ex) when (ex is UnknownImageFormatException or InvalidImageContentException)
         {
             return null;
         }
@@ -101,6 +96,25 @@ public sealed class ThumbnailService : IDisposable
         {
             _concurrencyLimiter.Release();
         }
+    }
+
+    private bool TryGetFreshCachedThumbnail(string cachePath, out ThumbnailResult? result)
+    {
+        result = null;
+        if (!File.Exists(cachePath))
+        {
+            return false;
+        }
+
+        var cacheInfo = new FileInfo(cachePath);
+        var age = DateTimeOffset.UtcNow - cacheInfo.LastWriteTimeUtc;
+        if (age.TotalDays > _options.ThumbnailCacheMaxAgeDays)
+        {
+            return false;
+        }
+
+        result = new ThumbnailResult(cachePath, cacheInfo.LastWriteTimeUtc);
+        return true;
     }
 
     private string GetCachePath(string virtualPath, DateTimeOffset sourceModified)

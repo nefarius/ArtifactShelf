@@ -1,14 +1,39 @@
+using System.Net;
 using System.Threading.RateLimiting;
 using ArtifactBrowser.Components;
 using ArtifactBrowser.Features.Files;
 using ArtifactBrowser.Options;
+using Microsoft.AspNetCore.Http.Timeouts;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOptions<ArtifactBrowserOptions>()
     .Bind(builder.Configuration.GetSection(ArtifactBrowserOptions.SectionName))
-    .ValidateDataAnnotations();
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+var requestTimeoutSeconds = builder.Configuration.GetSection(ArtifactBrowserOptions.SectionName)
+    .GetValue(nameof(ArtifactBrowserOptions.RequestTimeoutSeconds), 30);
+builder.Services.AddRequestTimeouts(options =>
+{
+    options.AddPolicy("files", TimeSpan.FromSeconds(Math.Max(1, requestTimeoutSeconds)));
+});
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    var proxies = builder.Configuration.GetSection($"{ArtifactBrowserOptions.SectionName}:KnownProxies").Get<string[]>()
+        ?? Array.Empty<string>();
+    foreach (var proxy in proxies)
+    {
+        if (IPAddress.TryParse(proxy, out var address))
+        {
+            options.KnownProxies.Add(address);
+        }
+    }
+});
 
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<PathGuard>();
@@ -66,14 +91,17 @@ else
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 
+app.UseForwardedHeaders();
 app.UseAntiforgery();
+app.UseRequestTimeouts();
 app.UseRateLimiter();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" })).ExcludeFromDescription();
 
 app.UseMiddleware<FilesExceptionMiddleware>();
 app.MapFilesEndpoints()
-    .RequireRateLimiting("files");
+    .RequireRateLimiting("files")
+    .WithRequestTimeout("files");
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

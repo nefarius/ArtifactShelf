@@ -27,7 +27,8 @@ else if (Preferences.ViewMode == ViewMode.Details)
             {
                 <tr class="items-table__row @(Selection.IsSelected(entry.Path) ? "is-selected" : "")"
                     tabindex="0"
-                    @onclick="e => HandleClick(entry, e)" @ondblclick="() => Open(entry)">
+                    @onclick="e => HandleClick(entry, e)" @ondblclick="() => Open(entry)"
+                    @onkeydown="e => HandleKey(entry, e)">
                     <td><FileIcon Entry="entry" /></td>
                     <td>@entry.Name</td>
                     <td class="items-table__size">@(entry.IsDirectory ? "" : FormatUtilities.FormatBytes(entry.Size))</td>
@@ -43,7 +44,8 @@ else
         @foreach (var entry in SortedEntries)
         {
             <div class="tile @(Selection.IsSelected(entry.Path) ? "is-selected" : "")" tabindex="0"
-                 @onclick="e => HandleClick(entry, e)" @ondblclick="() => Open(entry)" title="@entry.Name">
+                 @onclick="e => HandleClick(entry, e)" @ondblclick="() => Open(entry)"
+                 @onkeydown="e => HandleKey(entry, e)" title="@entry.Name">
                 @if (Preferences.ViewMode == ViewMode.Icons && entry.MediaCategory == MediaCategory.Image)
                 {
                     <img class="tile__thumb" src="@Api.GetThumbnailUrl(entry.Path)" alt="" loading="lazy" />
@@ -97,7 +99,7 @@ else
         }
 
         var dirCount = result.Count(e => e.IsDirectory);
-        var dirs = result.Take(dirCount);
+        var dirs = Enumerable.Reverse(result.Take(dirCount));
         var files = Enumerable.Reverse(result.Skip(dirCount));
         return dirs.Concat(files).ToList();
     }
@@ -106,9 +108,23 @@ else
 
     private void OnSelectionChanged() => InvokeAsync(StateHasChanged);
 
-    private void HandleClick(FileEntryDto entry, MouseEventArgs e)
+    private void HandleClick(FileEntryDto entry, MouseEventArgs e) =>
+        ApplySelection(entry, e.CtrlKey || e.MetaKey);
+
+    private Task HandleKey(FileEntryDto entry, KeyboardEventArgs e)
     {
-        if (e.CtrlKey || e.MetaKey)
+        if (e.Key is not ("Enter" or " "))
+        {
+            return Task.CompletedTask;
+        }
+
+        ApplySelection(entry, e.CtrlKey || e.MetaKey);
+        return Open(entry);
+    }
+
+    private void ApplySelection(FileEntryDto entry, bool toggle)
+    {
+        if (toggle)
         {
             Selection.Toggle(entry.Path);
         }

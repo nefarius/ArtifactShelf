@@ -89,6 +89,7 @@
     private bool _searchTruncated;
 
     private FileEntryDto? _previewEntry;
+    private int _requestVersion;
 
     protected override async Task OnInitializedAsync()
     {
@@ -109,6 +110,7 @@
 
     private async Task LoadAsync(string path)
     {
+        var version = ++_requestVersion;
         _loading = true;
         _error = null;
         _isSearching = false;
@@ -118,16 +120,29 @@
         try
         {
             var listing = await Api.ListDirectoryAsync(path);
+            if (version != _requestVersion)
+            {
+                return;
+            }
+
             _entries = listing?.Entries ?? new List<FileEntryDto>();
         }
         catch (Exception)
         {
+            if (version != _requestVersion)
+            {
+                return;
+            }
+
             _error = "This folder could not be loaded. It may not exist or may not be accessible.";
             _entries = new List<FileEntryDto>();
         }
         finally
         {
-            _loading = false;
+            if (version == _requestVersion)
+            {
+                _loading = false;
+            }
         }
     }
 
@@ -178,11 +193,19 @@
             return;
         }
 
+        var version = ++_requestVersion;
+        var folder = CurrentPath;
         _lastSearchQuery = query;
-        var response = await Api.SearchAsync(CurrentPath, query, recursive: true);
+        var response = await Api.SearchAsync(folder, query, recursive: true);
+        if (version != _requestVersion || !string.Equals(folder, CurrentPath, StringComparison.Ordinal))
+        {
+            return;
+        }
+
         _searchResults = response?.Results.Cast<FileEntryDto>().ToList() ?? new List<FileEntryDto>();
         _searchTruncated = response?.Truncated ?? false;
         _isSearching = true;
+        _loading = false;
         Selection.Clear();
     }
 

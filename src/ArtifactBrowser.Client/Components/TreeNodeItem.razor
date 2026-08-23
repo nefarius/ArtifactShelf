@@ -64,8 +64,7 @@
     protected override void OnParametersSet()
     {
         // Auto-expand ancestors of the currently active path so the tree reveals the current folder.
-        if (!Expanded && Node.HasChildren && CurrentPath.StartsWith(Node.Path, StringComparison.OrdinalIgnoreCase) &&
-            (Node.Path.Length == 0 || CurrentPath.Length > Node.Path.Length))
+        if (!Expanded && Node.HasChildren && IsAncestorOfCurrent())
         {
             _ = ExpandAsync();
         }
@@ -94,11 +93,32 @@
         {
             Loading = true;
             StateHasChanged();
-            var result = await Api.GetTreeAsync(Node.Path);
-            Children = result?.Children ?? new List<TreeNodeDto>();
-            Loading = false;
+            try
+            {
+                var result = await Api.GetTreeAsync(Node.Path);
+                Children = result?.Children ?? new List<TreeNodeDto>();
+            }
+            catch (Exception)
+            {
+                Children = null;
+                Expanded = false;
+            }
+            finally
+            {
+                Loading = false;
+            }
         }
 
         StateHasChanged();
+    }
+
+    private bool IsAncestorOfCurrent()
+    {
+        if (Node.Path.Length == 0)
+        {
+            return true;
+        }
+
+        return CurrentPath.StartsWith(Node.Path + "/", StringComparison.OrdinalIgnoreCase);
     }
 }

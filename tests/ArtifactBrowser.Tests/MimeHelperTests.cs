@@ -37,4 +37,10 @@ public sealed class MimeHelperTests
     {
         Assert.Equal("application/octet-stream", MimeHelper.GetContentType(".totallyunknown"));
     }
+
+    [Fact]
+    public void GetContentType_Svg_ReturnsPlainText()
+    {
+        Assert.Equal("text/plain", MimeHelper.GetContentType(".svg"));
+    }
 }

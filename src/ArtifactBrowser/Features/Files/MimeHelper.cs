@@ -41,7 +41,7 @@ public static class MimeHelper
         [".gif"] = "image/gif",
         [".webp"] = "image/webp",
         [".bmp"] = "image/bmp",
-        [".svg"] = "image/svg+xml",
+        [".svg"] = "text/plain",
         [".ico"] = "image/x-icon",
         [".mp3"] = "audio/mpeg",
         [".wav"] = "audio/wav",

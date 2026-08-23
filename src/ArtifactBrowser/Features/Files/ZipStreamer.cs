@@ -62,36 +62,64 @@ public sealed class ZipStreamer(PathGuard pathGuard, IOptions<ArtifactBrowserOpt
     private async Task AddDirectoryAsync(ZipArchive archive, string physicalDir, ArchiveTally tally, CancellationToken cancellationToken)
     {
         var baseName = Path.GetFileName(physicalDir.TrimEnd(Path.DirectorySeparatorChar));
+        var pending = new Stack<string>();
+        pending.Push(physicalDir);
 
-        IEnumerable<string> files;
-        try
+        while (pending.Count > 0)
         {
-            files = Directory.EnumerateFiles(physicalDir, "*", SearchOption.AllDirectories);
-        }
-        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
-        {
-            return;
-        }
-
-        foreach (var file in files)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var fileInfo = new FileInfo(file);
-            if (fileInfo.LinkTarget is not null)
+            var currentDir = pending.Pop();
+            IEnumerable<FileSystemInfo> entries;
+            try
             {
-                continue; // Do not follow symlinked files into the archive.
+                entries = new DirectoryInfo(currentDir).EnumerateFileSystemInfos("*", new EnumerationOptions
+                {
+                    IgnoreInaccessible = true,
+                    RecurseSubdirectories = false,
+                });
             }
-
-            var relative = Path.GetRelativePath(physicalDir, file).Replace(Path.DirectorySeparatorChar, '/');
-            var segments = relative.Split('/');
-            if (segments.Any(pathGuard.IsHiddenName))
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
             {
                 continue;
             }
 
-            var entryName = $"{baseName}/{relative}";
-            await AddFileAsync(archive, file, entryName, tally, cancellationToken);
+            try
+            {
+                foreach (var entry in entries)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (entry is DirectoryInfo directory)
+                    {
+                        if (directory.LinkTarget is not null
+                            || directory.Attributes.HasFlag(FileAttributes.ReparsePoint)
+                            || pathGuard.IsHiddenName(directory.Name))
+                        {
+                            continue;
+                        }
+
+                        pending.Push(directory.FullName);
+                        continue;
+                    }
+
+                    if (entry is not FileInfo fileInfo || fileInfo.LinkTarget is not null)
+                    {
+                        continue; // Do not follow symlinked files into the archive.
+                    }
+
+                    var relative = Path.GetRelativePath(physicalDir, fileInfo.FullName).Replace(Path.DirectorySeparatorChar, '/');
+                    var segments = relative.Split('/');
+                    if (segments.Any(pathGuard.IsHiddenName))
+                    {
+                        continue;
+                    }
+
+                    await AddFileAsync(archive, fileInfo.FullName, $"{baseName}/{relative}", tally, cancellationToken);
+                }
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+            {
+                // Enumeration can throw as the lazy enumerator advances; skip this directory.
+            }
         }
     }
 

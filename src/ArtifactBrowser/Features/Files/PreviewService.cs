@@ -63,7 +63,7 @@ public sealed class PreviewService(PathGuard pathGuard, IOptions<ArtifactBrowser
 
         await using var stream = new FileStream(resolved.PhysicalPath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 8192, useAsync: true);
         var buffer = new byte[Math.Min(maxBytes, checked((int)Math.Min(fileInfo.Length, maxBytes)))];
-        var read = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken);
+        var read = await stream.ReadAtLeastAsync(buffer.AsMemory(0, buffer.Length), buffer.Length, throwOnEndOfStream: false, cancellationToken);
         var truncated = fileInfo.Length > read;
 
         var text = DecodeText(buffer, read);

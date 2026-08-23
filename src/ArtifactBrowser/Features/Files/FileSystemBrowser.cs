@@ -166,7 +166,7 @@ public sealed class FileSystemBrowser(PathGuard pathGuard, IOptions<ArtifactBrow
                     });
                 }
 
-                if (recursive && entry is DirectoryInfo subDir)
+                if (recursive && entry is DirectoryInfo subDir && !IsSymlink(subDir))
                 {
                     Walk(subDir, childVirtual, depth + 1);
                 }
@@ -182,46 +182,42 @@ public sealed class FileSystemBrowser(PathGuard pathGuard, IOptions<ArtifactBrow
 
     private IEnumerable<FileSystemInfo> EnumerateSafely(DirectoryInfo dir)
     {
-        IEnumerable<FileSystemInfo> items;
+        // Materialize while swallowing per-entry errors (e.g. broken symlinks) and skip symlinks
+        // whose target cannot be safely validated. Enumeration itself can also throw as the lazy
+        // enumerator advances, so the same UnauthorizedAccess/IO handler wraps the foreach.
+        var safe = new List<FileSystemInfo>();
         try
         {
-            items = dir.EnumerateFileSystemInfos();
+            foreach (var item in dir.EnumerateFileSystemInfos())
+            {
+                try
+                {
+                    if (item.LinkTarget is not null)
+                    {
+                        var resolvedTarget = item.ResolveLinkTarget(returnFinalTarget: true);
+                        if (resolvedTarget is null)
+                        {
+                            continue;
+                        }
+
+                        var fullTarget = Path.GetFullPath(resolvedTarget.FullName);
+                        if (!pathGuard.IsWithinRoot(fullTarget))
+                        {
+                            continue;
+                        }
+                    }
+
+                    safe.Add(item);
+                }
+                catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+                {
+                    // Skip unreadable entries.
+                }
+            }
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
         {
             return Enumerable.Empty<FileSystemInfo>();
-        }
-
-        // Materialize while swallowing per-entry errors (e.g. broken symlinks) and skip symlinks
-        // whose target cannot be safely validated.
-        var safe = new List<FileSystemInfo>();
-        foreach (var item in items)
-        {
-            try
-            {
-                if (item.LinkTarget is not null)
-                {
-                    var resolvedTarget = item.ResolveLinkTarget(returnFinalTarget: true);
-                    if (resolvedTarget is null)
-                    {
-                        continue;
-                    }
-
-                    var fullTarget = Path.GetFullPath(resolvedTarget.FullName);
-                    var rootWithSep = pathGuard.ContentRoot + Path.DirectorySeparatorChar;
-                    if (!fullTarget.StartsWith(rootWithSep, StringComparison.OrdinalIgnoreCase) &&
-                        !string.Equals(fullTarget, pathGuard.ContentRoot, StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-                }
-
-                safe.Add(item);
-            }
-            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
-            {
-                // Skip unreadable entries.
-            }
         }
 
         return safe;

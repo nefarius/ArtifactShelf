@@ -99,15 +99,21 @@ public sealed class PathGuard
         return new ResolvedPath(fullPath, normalizedVirtual, segments.Length == 0 ? null : string.Join('/', segments[..^1]));
     }
 
-    private bool IsWithinRoot(string fullPath)
+    public bool IsWithinRoot(string fullPath)
     {
-        if (string.Equals(fullPath, _root, StringComparison.OrdinalIgnoreCase))
+        var relative = Path.GetRelativePath(_root, fullPath);
+        if (relative is "." or "")
         {
             return true;
         }
 
-        var rootWithSeparator = _root + Path.DirectorySeparatorChar;
-        return fullPath.StartsWith(rootWithSeparator, StringComparison.OrdinalIgnoreCase);
+        if (Path.IsPathRooted(relative))
+        {
+            return false;
+        }
+
+        return !string.Equals(relative, "..", StringComparison.OrdinalIgnoreCase)
+            && !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

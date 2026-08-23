@@ -103,6 +103,23 @@ public sealed class ApiIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task Search_OmittingRecursive_DoesNotDescend()
+    {
+        var result = await _client.GetFromJsonAsync<SearchResponseDto>("/api/files/search?path=&q=build.log");
+
+        Assert.NotNull(result);
+        Assert.DoesNotContain(result!.Results, r => r.Path == "builds/v1/build.log");
+    }
+
+    [Fact]
+    public async Task Archive_NullPaths_ReturnsBadRequest()
+    {
+        var response = await _client.PostAsJsonAsync("/api/files/archive", new { paths = (string[]?)null });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Archive_DownloadsZipOfSelectedPaths()
     {
         var response = await _client.PostAsJsonAsync("/api/files/archive", new { paths = new[] { "README.md" } });

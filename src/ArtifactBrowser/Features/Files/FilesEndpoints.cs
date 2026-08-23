@@ -2,7 +2,7 @@ using ArtifactBrowser.Client.Models;
 
 namespace ArtifactBrowser.Features.Files;
 
-public sealed record ArchiveRequest(List<string> Paths);
+public sealed record ArchiveRequest(List<string>? Paths);
 
 public static class FilesEndpoints
 {
@@ -20,14 +20,14 @@ public static class FilesEndpoints
             return Results.Ok(browser.GetTreeNode(path));
         });
 
-        group.MapGet("/search", (string? path, string q, bool recursive, FileSystemBrowser browser, CancellationToken ct) =>
+        group.MapGet("/search", (string? path, string q, bool? recursive, FileSystemBrowser browser, CancellationToken ct) =>
         {
             if (string.IsNullOrWhiteSpace(q))
             {
                 return Results.Ok(new SearchResponseDto());
             }
 
-            return Results.Ok(browser.Search(path, q, recursive, ct));
+            return Results.Ok(browser.Search(path, q, recursive ?? false, ct));
         });
 
         group.MapGet("/preview", async (string? path, PreviewService previewService, CancellationToken ct) =>
@@ -70,7 +70,7 @@ public static class FilesEndpoints
 
         group.MapPost("/archive", async (ArchiveRequest request, HttpContext context, ZipStreamer zipStreamer) =>
         {
-            if (request.Paths.Count == 0)
+            if (request.Paths is not { Count: > 0 })
             {
                 return Results.BadRequest(new ApiErrorDto { Message = "No paths were provided." });
             }
