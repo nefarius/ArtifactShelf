@@ -27,9 +27,6 @@ public sealed class ArtifactBrowserOptions
         "System Volume Information",
     };
 
-    /// <summary>Trusted reverse-proxy addresses used when honoring X-Forwarded-For for rate limiting.</summary>
-    public List<string> KnownProxies { get; set; } = new();
-
     /// <summary>Maximum number of bytes read when generating a raw text/markdown preview.</summary>
     [Range(1, long.MaxValue)]
     public long MaxTextPreviewBytes { get; set; } = 1 * 1024 * 1024;

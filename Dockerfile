@@ -34,9 +34,9 @@ ENV ASPNETCORE_URLS=http://+:8080 \
     ArtifactBrowser__ContentRoot=/data \
     ArtifactBrowser__CacheRoot=/cache
 
-# /data is expected to be bind-mounted read-only by the operator; /cache must be writable.
-RUN mkdir -p /data /cache \
-    && chown -R "${APP_UID}:${APP_UID}" /cache
+# /data is expected to be bind-mounted read-only; /cache and /app/logs must be writable.
+RUN mkdir -p /data /cache /app/logs \
+    && chown -R "${APP_UID}:${APP_UID}" /cache /app/logs
 
 COPY --from=build /app/publish .
 RUN chown -R "${APP_UID}:${APP_UID}" /app

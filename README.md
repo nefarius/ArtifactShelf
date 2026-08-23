@@ -56,6 +56,26 @@ convention, e.g. `ArtifactBrowser__ContentRoot=/data`.
 
 Public HTTP endpoints under `/api/files/*` are also protected by fixed-window rate limiting
 (120 req/10s general, 20 req/30s for thumbnails and ZIP archives per client IP) to bound abuse.
+Rate limiting partitions on `Connection.RemoteIpAddress`, which is the forwarded client IP
+when the host sits behind a trusted reverse proxy (see [Reverse proxy](#reverse-proxy-traefik)).
+
+Host bootstrap (Serilog, W3C access logs, and forwarded headers) comes from
+[`Nefarius.Utilities.AspNetCore`](https://github.com/nefarius/Nefarius.Utilities.AspNetCore).
+Those settings live outside the `ArtifactBrowser` section:
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `WebApplicationBuilderOptions:W3C:RetainedFileCountLimit` | `3` | Uncompressed W3C access-log files to keep. |
+| `WebApplicationBuilderOptions:W3C:RetainedCompressedFileCountLimit` | `90` | Compressed W3C archives to keep. |
+| `WebApplicationBuilderOptions:Forwarding:AutoDetectPrivateNetworks` | `true` | Treat detected private/Docker networks as trusted proxies. |
+| `WebApplicationOptions:UseForwardedHeaders` | `true` | Honor `X-Forwarded-*` so logs and the rate limiter see the real client IP. |
+| `WebApplicationOptions:UseSerilogRequestLogging` | `false` | Also write one Serilog line per HTTP request. |
+
+Serilog writes rolling `server-*.log` files and W3C writes `access-*` files under
+`logs/` in the application root (`/app/logs` in the container). Override sinks or
+retention with environment variables, e.g.
+`WebApplicationBuilderOptions__W3C__RetainedFileCountLimit=12`. Keep the Microsoft
+`Logging` section as a fallback; Serilog is the active logger once `Setup()` runs.
 
 ## Local development
 
@@ -103,6 +123,8 @@ Key points:
   `mcr.microsoft.com/dotnet/aspnet` convention). If you bind-mount a host directory instead of a
   named volume, `chown -R 1654:1654 /path/on/host` it first, or simply use a named Docker volume
   (as in `compose.example.yml`) and let Docker manage ownership.
+- **`/app/logs` is optional but recommended** so Serilog/W3C files survive container recreation.
+  Bind-mounts (e.g. `./logs:/app/logs`) need the same UID **1654** ownership as `/cache`.
 - The container listens on port **8080** and exposes `GET /health` for container/orchestrator
   health checks (already wired into the `Dockerfile`'s `HEALTHCHECK` and the Compose example).
 - Set `TZ` (e.g. `TZ=Europe/Vienna`) to control the timezone used for displayed timestamps and
@@ -117,6 +139,14 @@ used for other services behind `buildbot.nefarius.at` — adjust the router name
 entrypoint, and cert resolver labels to match your Traefik instance. The app itself does not
 need to know about TLS or the external hostname; it only needs the reverse proxy to forward to
 port `8080`.
+
+`Nefarius.Utilities.AspNetCore` enables forwarded headers and auto-detects private/Docker
+networks, which is what Traefik on the Compose `web`/`traefik` network needs. After that,
+`X-Forwarded-For` / `X-Forwarded-Proto` populate `Connection.RemoteIpAddress` for Serilog, W3C
+logs, and the rate limiter. **Do not enable forwarded headers if the container is published
+directly to the Internet** — clients could spoof those headers. To turn them off, set
+`WebApplicationOptions__UseForwardedHeaders=false` (and typically
+`WebApplicationBuilderOptions__Forwarding__AutoDetectPrivateNetworks=false`).
 
 ## Security & hardening notes
 

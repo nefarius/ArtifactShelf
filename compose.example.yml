@@ -17,11 +17,17 @@ services:
       ArtifactBrowser__ContentRoot: /data
       ArtifactBrowser__CacheRoot: /cache
       TZ: Etc/UTC
+      # Optional: override Serilog/W3C retention from Nefarius.Utilities.AspNetCore.
+      # WebApplicationBuilderOptions__W3C__RetainedFileCountLimit: "12"
+      # WebApplicationBuilderOptions__W3C__RetainedCompressedFileCountLimit: "600"
     volumes:
       # The artifact tree is mounted read-only; the app never writes to it.
       - /srv/artifacts:/data:ro
       # Thumbnails are cached here; must be writable by the container's non-root user (UID 1654).
       - artifact-browser-cache:/cache
+      # Serilog server logs and W3C access logs (defaults to /app/logs). Bind-mounts must be
+      # writable by UID 1654 (`chown -R 1654:1654 ./logs`); a named volume also works.
+      - ./logs:/app/logs
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "--max-time", "3", "http://127.0.0.1:8080/health"]
       interval: 30s
