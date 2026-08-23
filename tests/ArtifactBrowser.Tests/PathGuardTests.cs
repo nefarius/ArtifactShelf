@@ -51,6 +51,26 @@ public sealed class PathGuardTests : IDisposable
         Assert.Throws<PathAccessDeniedException>(() => _guard.Resolve(hiddenPath));
     }
 
+    [Theory]
+    [InlineData(".hidden-file.txt")]
+    [InlineData(".hidden-dir/secret.txt")]
+    public void Resolve_AllowHidden_HiddenFile_Succeeds(string hiddenPath)
+    {
+        var resolved = _guard.Resolve(hiddenPath, allowHidden: true);
+
+        Assert.Equal(Path.Combine(_root.ContentRoot, hiddenPath.Replace('/', Path.DirectorySeparatorChar)), resolved.PhysicalPath);
+        Assert.Equal(hiddenPath, resolved.VirtualPath);
+    }
+
+    [Theory]
+    [InlineData("../secret")]
+    [InlineData("docs/../../secret")]
+    [InlineData("..")]
+    public void Resolve_AllowHidden_TraversalAttempt_StillThrows(string maliciousPath)
+    {
+        Assert.Throws<PathAccessDeniedException>(() => _guard.Resolve(maliciousPath, allowHidden: true));
+    }
+
     [Fact]
     public void Resolve_NullByteInSegment_ThrowsPathAccessDenied()
     {

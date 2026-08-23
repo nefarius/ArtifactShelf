@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json;
 using ArtifactBrowser.Client.Models;
 using ArtifactBrowser.Tests.TestSupport;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -38,6 +39,29 @@ public sealed class ApiIntegrationTests : IDisposable
         var response = await _client.GetAsync("/health");
 
         response.EnsureSuccessStatusCode();
+        var payload = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("healthy", payload.GetProperty("status").GetString());
+    }
+
+    [Fact]
+    public async Task Health_WhenReservedPathArtifactExists_StillReturnsHealthPayload()
+    {
+        var response = await _client.GetAsync("/health");
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("healthy", body);
+        Assert.DoesNotContain("collision-health", body);
+    }
+
+    [Fact]
+    public async Task Raw_WhenReservedPathArtifactExists_StillServesQueryPath()
+    {
+        var response = await _client.GetAsync("/api/files/raw?path=docs/notes.txt");
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("hello world\n", await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -98,6 +122,108 @@ public sealed class ApiIntegrationTests : IDisposable
         var response = await _client.GetAsync("/api/files/raw?path=does-not-exist.txt");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Raw_HiddenFile_ReturnsFileBytes()
+    {
+        var response = await _client.GetAsync("/api/files/raw?path=.hidden-file.txt");
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("text/plain", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("should not be listed\n", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task PrettyUrl_ExistingFile_ReturnsFileBytes()
+    {
+        var response = await _client.GetAsync("/docs/notes.txt");
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("text/plain", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("hello world\n", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task PrettyUrl_ExistingFile_HeadReturnsHeadersWithoutBody()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Head, "/docs/notes.txt");
+        var response = await _client.SendAsync(request);
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("text/plain", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(Encoding.UTF8.GetByteCount("hello world\n"), response.Content.Headers.ContentLength);
+        Assert.Empty(await response.Content.ReadAsByteArrayAsync());
+    }
+
+    [Fact]
+    public async Task PrettyUrl_ExistingFile_SupportsRangeRequests()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/docs/notes.txt");
+        request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(0, 3);
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.PartialContent, response.StatusCode);
+        Assert.Equal(4, response.Content.Headers.ContentLength);
+        Assert.Equal(0, response.Content.Headers.ContentRange?.From);
+        Assert.Equal(3, response.Content.Headers.ContentRange?.To);
+
+        var body = await response.Content.ReadAsByteArrayAsync();
+        Assert.Equal(Encoding.UTF8.GetBytes("hell"), body);
+    }
+
+    [Fact]
+    public async Task PrettyUrl_Directory_DoesNotServeFileBytes()
+    {
+        var response = await _client.GetAsync("/docs");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Artifact Browser", body);
+        Assert.Contains("blazor.web.js", body);
+        Assert.NotEqual("hello world\n", body);
+    }
+
+    [Fact]
+    public async Task PrettyUrl_NestedFile_ReturnsFileBytes()
+    {
+        var response = await _client.GetAsync("/builds/v1/build.log");
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("text/plain", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("build ok\n", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task PrettyUrl_HiddenFile_ReturnsFileBytes()
+    {
+        var response = await _client.GetAsync("/.hidden-file.txt");
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("text/plain", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("should not be listed\n", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task PrettyUrl_FileInsideHiddenDirectory_ReturnsFileBytes()
+    {
+        var response = await _client.GetAsync("/.hidden-dir/secret.txt");
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("text/plain", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("hidden\n", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task List_RootPath_OmitsHiddenFileAndDirectory()
+    {
+        var listing = await _client.GetFromJsonAsync<DirectoryListingDto>("/api/files/list?path=");
+
+        Assert.NotNull(listing);
+        Assert.DoesNotContain(listing!.Entries, e => e.Name == ".hidden-file.txt");
+        Assert.DoesNotContain(listing.Entries, e => e.Name == ".hidden-dir");
     }
 
     [Fact]
