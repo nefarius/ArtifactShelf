@@ -1,0 +1,15 @@
+@namespace ArtifactBrowser.Client.Components
+@using Markdig
+
+<div class="markdown-view">@((MarkupString)Render(Content))</div>
+
+@code {
+    private static readonly MarkdownPipeline Pipeline =
+        new MarkdownPipelineBuilder().DisableHtml().UseAdvancedExtensions().Build();
+
+    [Parameter]
+    public string? Content { get; set; }
+
+    private static string Render(string? markdown) =>
+        Markdown.ToHtml(markdown ?? string.Empty, Pipeline);
+}

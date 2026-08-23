@@ -1,6 +1,5 @@
 @namespace ArtifactBrowser.Client.Components
 @using ArtifactBrowser.Client.Services
-@using Markdig
 @inject FilesApiClient Api
 
 <div class="preview-overlay" role="dialog" aria-modal="true" aria-label="Preview: @Entry.Name" @onclick="Close" @onkeyup="OnKeyUp" tabindex="-1" @ref="_overlayRef">
@@ -34,7 +33,7 @@
                 switch (_preview.Kind)
                 {
                     case PreviewKind.Markdown:
-                        <div class="preview-dialog__markdown">@((MarkupString)RenderMarkdown(_preview.Content ?? string.Empty))</div>
+                        <MarkdownView Content="@_preview.Content" />
                         break;
                     case PreviewKind.Text:
                         <pre class="preview-dialog__text">@_preview.Content</pre>
@@ -69,9 +68,6 @@
 </div>
 
 @code {
-    private static readonly MarkdownPipeline MarkdownPipelineInstance =
-        new MarkdownPipelineBuilder().DisableHtml().UseAdvancedExtensions().Build();
-
     [Parameter, EditorRequired]
     public FileEntryDto Entry { get; set; } = null!;
 
@@ -125,8 +121,6 @@
             _loading = false;
         }
     }
-
-    private static string RenderMarkdown(string markdown) => Markdown.ToHtml(markdown, MarkdownPipelineInstance);
 
     private Task Navigate(int direction)
     {

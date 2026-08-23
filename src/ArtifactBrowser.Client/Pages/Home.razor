@@ -55,11 +55,23 @@
                     @(_searchResults.Count) result(s) for "@_lastSearchQuery"@(_searchTruncated ? " (truncated)" : "")
                     <button type="button" class="toolbar__btn" @onclick="ClearSearch">Back to folder</button>
                 </p>
-                <ItemsView Entries="_searchResults" Preferences="Prefs.Preferences" FilterText="" OnOpen="OpenEntryAsync" />
+                <div class="content__listing">
+                    <ItemsView Entries="_searchResults" Preferences="Prefs.Preferences" FilterText="" OnOpen="OpenEntryAsync" />
+                </div>
             }
             else
             {
-                <ItemsView Entries="_entries" Preferences="Prefs.Preferences" FilterText="@_filterText" OnOpen="OpenEntryAsync" />
+                <div class="content__split@(_indexMarkdown is not null ? " content__split--with-index" : "")">
+                    <div class="content__listing">
+                        <ItemsView Entries="_entries" Preferences="Prefs.Preferences" FilterText="@_filterText" OnOpen="OpenEntryAsync" />
+                    </div>
+                    @if (_indexMarkdown is not null)
+                    {
+                        <section class="content__index" aria-label="Folder readme">
+                            <MarkdownView Content="@_indexMarkdown" />
+                        </section>
+                    }
+                </div>
             }
         </main>
 
@@ -89,6 +101,7 @@
     private bool _searchTruncated;
 
     private FileEntryDto? _previewEntry;
+    private string? _indexMarkdown;
     private int _requestVersion;
 
     protected override async Task OnInitializedAsync()
@@ -114,6 +127,7 @@
         _loading = true;
         _error = null;
         _isSearching = false;
+        _indexMarkdown = null;
         Selection.Clear();
         StateHasChanged();
 
@@ -126,6 +140,7 @@
             }
 
             _entries = listing?.Entries ?? new List<FileEntryDto>();
+            await TryLoadIndexMarkdownAsync(version);
         }
         catch (Exception)
         {
@@ -136,6 +151,7 @@
 
             _error = "This folder could not be loaded. It may not exist or may not be accessible.";
             _entries = new List<FileEntryDto>();
+            _indexMarkdown = null;
         }
         finally
         {
@@ -143,6 +159,34 @@
             {
                 _loading = false;
             }
+        }
+    }
+
+    private async Task TryLoadIndexMarkdownAsync(int version)
+    {
+        var index = _entries.FirstOrDefault(e =>
+            !e.IsDirectory && e.Name.Equals("index.md", StringComparison.OrdinalIgnoreCase));
+        if (index is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var preview = await Api.GetPreviewAsync(index.Path);
+            if (version != _requestVersion)
+            {
+                return;
+            }
+
+            if (preview is { Kind: PreviewKind.Markdown, Content: not null })
+            {
+                _indexMarkdown = preview.Content;
+            }
+        }
+        catch (Exception)
+        {
+            // Omit the readme panel; the listing is still usable.
         }
     }
 
