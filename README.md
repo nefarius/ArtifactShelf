@@ -38,7 +38,7 @@ convention, e.g. `ArtifactBrowser__ContentRoot=/data`.
 | --- | --- | --- |
 | `ContentRoot` | `/data` | Read-only artifact tree root that is browsed. |
 | `CacheRoot` | `/cache` | Writable cache root, used only for generated thumbnails. |
-| `HiddenPatterns` | `.*`, `Thumbs.db`, `desktop.ini`, `@eaDir`, `$RECYCLE.BIN`, `System Volume Information` | Glob patterns (matched per path segment) hidden from listings, search, and direct access. |
+| `HiddenPatterns` | `.*`, `Thumbs.db`, `desktop.ini`, `@eaDir`, `$RECYCLE.BIN`, `System Volume Information` | Glob patterns (matched per path segment) hidden from listings, the sidebar tree, and search. A known file URL still downloads, including dotfile sidecars. |
 | `MaxTextPreviewBytes` | `1048576` (1 MiB) | Max bytes read for a text/Markdown preview; larger files report `TooLarge`. |
 | `MaxDirectoryEntries` | `20000` | Max entries returned per directory listing. |
 | `MaxTreeDepth` | `64` | Max recursion depth for the sidebar tree. |
@@ -89,6 +89,12 @@ By default, `appsettings.Development.json` points `ContentRoot`/`CacheRoot` at t
 [`sample-data/`](sample-data) folder and a local `.cache/` folder (both relative to the repo root),
 so you can browse sample content immediately at `http://localhost:5289` (or whatever port
 `dotnet run` selects). Drop your own files into `sample-data/` to try real content.
+
+A URL whose path equals the artifact virtual path is a direct download — the same as the old
+h5ai-style host. `curl`, CI scripts, and `HttpClient` can fetch
+`/builds/HidHide/latest/bin/Release/x64/HidHideClient.exe` (or a hidden sidecar such as
+`.HidHideClient.exe.json`) and receive the file bytes. A directory URL still opens the
+browser UI.
 
 Run the test suite:
 
@@ -154,7 +160,8 @@ directly to the Internet** — clients could spoof those headers. To turn them o
   `ContentRoot`; traversal segments (`..`), null bytes, and symlinks that resolve outside the
   root are rejected (`src/ArtifactBrowser/Features/Files/PathGuard.cs`).
 - **Hidden entries**: names matching `HiddenPatterns` are excluded from listings, the sidebar
-  tree, search results, and direct access (they resolve as if they didn't exist).
+  tree, and search results. Direct file URLs (and `/api/files/raw`) still download an
+  existing file even when a path segment is hidden.
 - **No physical paths are ever exposed** to the client — all API responses and URLs use
   root-relative virtual paths.
 - **Bounded work**: directory entries, tree depth, search results/depth, text preview size, and

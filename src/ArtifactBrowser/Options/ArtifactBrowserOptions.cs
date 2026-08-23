@@ -16,7 +16,7 @@ public sealed class ArtifactBrowserOptions
     /// <summary>Absolute path to the writable cache used for generated thumbnails.</summary>
     public string CacheRoot { get; set; } = "/cache";
 
-    /// <summary>Glob-style patterns (matched against file/directory names) that are hidden from listings, search, and direct access.</summary>
+    /// <summary>Glob-style patterns (matched against file/directory names) that are hidden from listings, the sidebar tree, and search. Direct file URLs still download matching files.</summary>
     public List<string> HiddenPatterns { get; set; } = new()
     {
         ".*",

@@ -37,25 +37,7 @@ public static class FilesEndpoints
         });
 
         group.MapGet("/raw", (string? path, bool? download, PathGuard pathGuard) =>
-        {
-            var resolved = pathGuard.Resolve(path);
-            if (!File.Exists(resolved.PhysicalPath))
-            {
-                return Results.NotFound();
-            }
-
-            var fileInfo = new FileInfo(resolved.PhysicalPath);
-            var extension = Path.GetExtension(resolved.PhysicalPath);
-            var contentType = MimeHelper.GetContentType(extension);
-            var fileName = Path.GetFileName(resolved.PhysicalPath);
-
-            return Results.File(
-                resolved.PhysicalPath,
-                contentType,
-                fileDownloadName: download == true ? fileName : null,
-                lastModified: fileInfo.LastWriteTimeUtc,
-                enableRangeProcessing: true);
-        });
+            ArtifactFileResult.FromVirtualPath(path, download == true, pathGuard));
 
         group.MapGet("/thumbnail", async (string? path, ThumbnailService thumbnailService, CancellationToken ct) =>
         {
@@ -103,5 +85,30 @@ public static class FilesEndpoints
         }).RequireRateLimiting("heavy");
 
         return group;
+    }
+
+    /// <summary>
+    /// Serves an existing artifact file at its natural URL so curl, scripts, and browsers can
+    /// download it without going through <c>/api/files/raw</c>. Directories fall through to the SPA.
+    /// </summary>
+    public static IEndpointConventionBuilder MapDirectArtifactFiles(this IEndpointRouteBuilder app)
+    {
+        var endpoint = app.MapMethods(
+            "/{**artifactPath:artifactFile}",
+            new[] { HttpMethods.Get, HttpMethods.Head },
+            (string artifactPath, bool? download, PathGuard pathGuard) =>
+                ArtifactFileResult.FromVirtualPath(artifactPath, download == true, pathGuard));
+
+        endpoint.Add(builder =>
+        {
+            if (builder is RouteEndpointBuilder routeEndpointBuilder)
+            {
+                // Win over Home.razor's "/{*Path}" when the constraint matches, but stay
+                // below MapStaticAssets (Order = int.MinValue) so framework scripts still win.
+                routeEndpointBuilder.Order = -1;
+            }
+        });
+
+        return endpoint;
     }
 }

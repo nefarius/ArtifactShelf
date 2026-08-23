@@ -63,6 +63,11 @@ builder.Services.AddRateLimiter(rateLimiterOptions =>
 });
 
 // Add services to the container.
+builder.Services.Configure<RouteOptions>(options =>
+{
+    options.ConstraintMap.Add("artifactFile", typeof(ExistingArtifactFileConstraint));
+});
+
 builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents();
 
@@ -99,6 +104,12 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy" })).ExcludeFromD
 
 app.UseMiddleware<FilesExceptionMiddleware>();
 app.MapFilesEndpoints()
+    .RequireRateLimiting("files")
+    .WithRequestTimeout("files");
+
+// Pretty URLs that map to a real file (including hidden/dotfile names) are served as downloads
+// so curl and scripts keep working. Directories and missing paths fall through to the SPA.
+app.MapDirectArtifactFiles()
     .RequireRateLimiting("files")
     .WithRequestTimeout("files");
 

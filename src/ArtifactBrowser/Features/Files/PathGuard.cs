@@ -11,7 +11,9 @@ public sealed class PathAccessDeniedException(string message) : Exception(messag
 
 /// <summary>
 /// Resolves virtual (client-facing) paths to confined, canonical filesystem paths under the
-/// configured content root. Rejects traversal attempts, symlink escapes, and hidden entries.
+/// configured content root. Rejects traversal attempts and symlink escapes. Hidden entries
+/// are rejected by default so listings cannot navigate them; direct file downloads may pass
+/// <c>allowHidden: true</c>.
 /// </summary>
 public sealed class PathGuard
 {
@@ -64,10 +66,11 @@ public sealed class PathGuard
 
     /// <summary>
     /// Resolves the given virtual path to a real, confined physical path. Throws
-    /// <see cref="PathAccessDeniedException"/> if the path escapes the content root, contains a
-    /// hidden segment, or traverses a symlink that points outside the root.
+    /// <see cref="PathAccessDeniedException"/> if the path escapes the content root or
+    /// traverses a symlink that points outside the root. Hidden segments are rejected unless
+    /// <paramref name="allowHidden"/> is <c>true</c> (used for direct file downloads).
     /// </summary>
-    public ResolvedPath Resolve(string? virtualPath)
+    public ResolvedPath Resolve(string? virtualPath, bool allowHidden = false)
     {
         var segments = SplitSegments(virtualPath ?? string.Empty);
 
@@ -79,7 +82,7 @@ public sealed class PathGuard
                 throw new PathAccessDeniedException("Path traversal is not allowed.");
             }
 
-            if (IsHiddenName(rawSegment))
+            if (!allowHidden && IsHiddenName(rawSegment))
             {
                 throw new PathAccessDeniedException("Path contains a hidden segment.");
             }
