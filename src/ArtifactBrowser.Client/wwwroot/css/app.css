@@ -52,6 +52,7 @@ html, body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    height: 100%;
 }
 
 a {
@@ -203,8 +204,38 @@ a {
 
 .content {
     flex: 1;
-    overflow: auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     padding: 0.25rem 0;
+}
+
+.content__split {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.content__split--with-index {
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+}
+
+.content__listing {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+}
+
+.content__index {
+    min-height: 0;
+    overflow: auto;
+    border-top: 1px solid var(--border);
+    padding: 0.9rem 1rem;
+    background: var(--bg-elevated);
 }
 
 .metadata-panel {
@@ -587,15 +618,23 @@ a {
     margin: 0;
 }
 
+.markdown-view img,
 .preview-dialog__markdown img {
     max-width: 100%;
 }
 
+.markdown-view pre,
 .preview-dialog__markdown pre {
     background: var(--row-hover);
     padding: 0.6rem;
     overflow: auto;
     border-radius: var(--radius);
+}
+
+.markdown-view h1,
+.markdown-view h2,
+.markdown-view h3 {
+    margin-top: 0.4rem;
 }
 
 .preview-dialog__image {
