@@ -39,8 +39,8 @@ public sealed class MimeHelperTests
     }
 
     [Fact]
-    public void GetContentType_Svg_ReturnsPlainText()
+    public void GetContentType_Svg_ReturnsSvgXml()
     {
-        Assert.Equal("text/plain", MimeHelper.GetContentType(".svg"));
+        Assert.Equal("image/svg+xml", MimeHelper.GetContentType(".svg"));
     }
 }
