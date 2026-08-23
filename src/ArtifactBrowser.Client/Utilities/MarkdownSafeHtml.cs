@@ -1,11 +1,13 @@
 using System.Text.RegularExpressions;
 using Markdig;
+using Markdig.Renderers;
 
 namespace ArtifactBrowser.Client.Utilities;
 
 /// <summary>
 /// Renders untrusted artifact Markdown to HTML. Raw HTML is disabled, generic attributes
-/// are not enabled, and a final pass strips event-handler attributes and script URLs.
+/// are not enabled, and link/image URLs are rewritten on the HTML render path so
+/// literal text is left unchanged.
 /// </summary>
 public static class MarkdownSafeHtml
 {
@@ -16,20 +18,31 @@ public static class MarkdownSafeHtml
             .UseEmphasisExtras()
             .UseAutoIdentifiers()
             .UseTaskLists()
+            .Use<SafeLinkExtension>()
             .Build();
 
-    private static readonly Regex EventHandlerAttributes = new(
-        @"\s+on[a-z]+\s*=\s*(?:""[^""]*""|'[^']*'|[^\s>]+)",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
-
-    private static readonly Regex DangerousUrlAttribute = new(
-        @"(?<=\b(?:href|src)\s*=\s*(['""]?))\s*(?:javascript|data|vbscript)\s*:",
+    private static readonly Regex DangerousScheme = new(
+        @"^\s*(?:javascript|data|vbscript)\s*:",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public static string ToHtml(string? markdown)
+        => Markdown.ToHtml(markdown ?? string.Empty, Pipeline);
+
+    private static string RewriteDangerousUrl(string url)
+        => DangerousScheme.IsMatch(url) ? "#" : url;
+
+    private sealed class SafeLinkExtension : IMarkdownExtension
     {
-        var html = Markdown.ToHtml(markdown ?? string.Empty, Pipeline);
-        html = EventHandlerAttributes.Replace(html, string.Empty);
-        return DangerousUrlAttribute.Replace(html, "#");
+        public void Setup(MarkdownPipelineBuilder pipeline)
+        {
+        }
+
+        public void Setup(MarkdownPipeline pipeline, IMarkdownRenderer renderer)
+        {
+            if (renderer is HtmlRenderer htmlRenderer)
+            {
+                htmlRenderer.LinkRewriter = RewriteDangerousUrl;
+            }
+        }
     }
 }

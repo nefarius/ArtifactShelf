@@ -40,4 +40,46 @@ public sealed class MarkdownSafeHtmlTests
 
         Assert.DoesNotContain("javascript:", html, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void ToHtml_NeutralizesImageAndObfuscatedScriptUrls()
+    {
+        var html = MarkdownSafeHtml.ToHtml(
+            "![](javascript:alert(1))\n\n[x]( data:text/html,hi) [y](vbscript:msgbox(1))");
+
+        Assert.DoesNotContain("javascript:", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("data:", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("vbscript:", html, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ToHtml_PreservesLiteralScriptUrlAndEventHandlerText()
+    {
+        var html = MarkdownSafeHtml.ToHtml(
+            "Do not write href=\"javascript:alert(1)\" or onclick=\"alert(1)\" in docs.\n");
+
+        Assert.Contains("javascript:alert(1)", html, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("onclick=", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotMatch(@"(?i)<[^>]+(?:href|src)\s*=\s*['""]?\s*(?:javascript|data|vbscript)\s*:", html);
+        Assert.DoesNotMatch(@"(?i)<[^>]+\son[a-z]+\s*=", html);
+    }
+
+    [Fact]
+    public void ToHtml_PreservesEventHandlerLookalikesInLinkTextAndImageAlt()
+    {
+        var html = MarkdownSafeHtml.ToHtml(
+            "[hello onclick=x](https://example.com)\n\n![ onclick=foo ](https://example.com/x.png)");
+
+        Assert.Contains("hello onclick=x", html);
+        Assert.Contains("onclick=foo", html);
+        Assert.Contains("https://example.com", html);
+    }
+
+    [Fact]
+    public void ToHtml_PreservesJavascriptInCodeSpan()
+    {
+        var html = MarkdownSafeHtml.ToHtml("`href=\"javascript:alert(1)\"`");
+
+        Assert.Contains("javascript:alert(1)", html, StringComparison.OrdinalIgnoreCase);
+    }
 }
