@@ -74,8 +74,13 @@ a {
     letter-spacing: 0.02em;
 }
 
-.app-header__title:focus {
+.app-header__title:focus:not(:focus-visible) {
     outline: none;
+}
+
+.app-header__title:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
 }
 
 /* Toolbar */
