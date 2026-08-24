@@ -28,6 +28,10 @@ public sealed class UiScaleTests
     [InlineData("110", 110)]
     [InlineData("75", 80)]
     [InlineData("250", 200)]
+    [InlineData("110foo", 100)]
+    [InlineData("2147483648", 100)]
+    [InlineData("-2147483649", 100)]
+    [InlineData("+110", 110)]
     public void Parse_RejectsGarbageAndClamps(string? raw, int expected)
     {
         Assert.Equal(expected, UiScale.Parse(raw));
@@ -39,6 +43,8 @@ public sealed class UiScaleTests
         Assert.Equal(110, UiScale.Increase(100));
         Assert.Equal(200, UiScale.Increase(200));
         Assert.Equal(200, UiScale.Increase(195));
+        Assert.Equal(200, UiScale.Increase(int.MaxValue));
+        Assert.InRange(UiScale.Increase(int.MaxValue), UiScale.MinPercent, UiScale.MaxPercent);
     }
 
     [Fact]
@@ -47,6 +53,8 @@ public sealed class UiScaleTests
         Assert.Equal(90, UiScale.Decrease(100));
         Assert.Equal(80, UiScale.Decrease(80));
         Assert.Equal(80, UiScale.Decrease(85));
+        Assert.Equal(80, UiScale.Decrease(int.MinValue));
+        Assert.InRange(UiScale.Decrease(int.MinValue), UiScale.MinPercent, UiScale.MaxPercent);
     }
 
     [Fact]

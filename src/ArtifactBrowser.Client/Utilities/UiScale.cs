@@ -36,9 +36,9 @@ public static class UiScale
         return Clamp(value);
     }
 
-    public static int Increase(int percent) => Clamp(percent + StepPercent);
+    public static int Increase(int percent) => Clamp(Clamp(percent) + StepPercent);
 
-    public static int Decrease(int percent) => Clamp(percent - StepPercent);
+    public static int Decrease(int percent) => Clamp(Clamp(percent) - StepPercent);
 
     public static int Reset() => DefaultPercent;
 
