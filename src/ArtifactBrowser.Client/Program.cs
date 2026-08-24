@@ -14,5 +14,6 @@ builder.Services.AddScoped<PreferencesService>();
 builder.Services.AddScoped<SelectionService>();
 builder.Services.AddScoped<LocalStorageService>();
 builder.Services.AddScoped<DownloadService>();
+builder.Services.AddScoped<ZoomService>();
 
 await builder.Build().RunAsync();

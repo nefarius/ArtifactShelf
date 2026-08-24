@@ -90,6 +90,10 @@ By default, `appsettings.Development.json` points `ContentRoot`/`CacheRoot` at t
 so you can browse sample content immediately at `http://localhost:5289` (or whatever port
 `dotnet run` selects). Drop your own files into `sample-data/` to try real content.
 
+The toolbar can increase, decrease, or reset **page zoom** (text and icon size, 80–200%,
+like display scaling). The chosen level is stored in `localStorage` as
+`artifact-browser.ui-scale` and applied on first paint.
+
 A URL whose path equals the artifact virtual path is a direct download — the same as the old
 h5ai-style host. `curl`, CI scripts, and `HttpClient` can fetch
 `/builds/HidHide/latest/bin/Release/x64/HidHideClient.exe` (or a hidden sidecar such as
