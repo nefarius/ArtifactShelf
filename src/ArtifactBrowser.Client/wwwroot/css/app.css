@@ -415,21 +415,44 @@ a {
 
 /* Grid/icon views */
 .items-tiles {
+    --tile-icon: calc(72rem / 13);
     display: grid;
     gap: 0.6rem;
     padding: 0.75rem;
 }
 
 .items-tiles--small {
-    grid-template-columns: repeat(auto-fill, minmax(calc(80rem / 13), 1fr));
+    --tile-icon: calc(48rem / 13);
+    grid-template-columns: repeat(auto-fill, calc(80rem / 13));
 }
 
 .items-tiles--medium {
-    grid-template-columns: repeat(auto-fill, minmax(calc(110rem / 13), 1fr));
+    --tile-icon: calc(72rem / 13);
+    grid-template-columns: repeat(auto-fill, calc(110rem / 13));
 }
 
 .items-tiles--large {
-    grid-template-columns: repeat(auto-fill, minmax(calc(150rem / 13), 1fr));
+    --tile-icon: calc(112rem / 13);
+    grid-template-columns: repeat(auto-fill, calc(150rem / 13));
+}
+
+.items-tiles .file-icon,
+.items-tiles .tile__thumb {
+    width: var(--tile-icon);
+    height: var(--tile-icon);
+    flex-shrink: 0;
+}
+
+.items-tiles--small .file-icon__ext {
+    font-size: 0.45rem;
+}
+
+.items-tiles--medium .file-icon__ext {
+    font-size: 0.55rem;
+}
+
+.items-tiles--large .file-icon__ext {
+    font-size: 0.7rem;
 }
 
 .tile {
@@ -452,8 +475,6 @@ a {
 }
 
 .tile__thumb {
-    width: 100%;
-    max-height: calc(90rem / 13);
     object-fit: cover;
     border-radius: var(--radius);
     background: var(--border);
