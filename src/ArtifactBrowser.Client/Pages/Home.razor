@@ -5,6 +5,7 @@
 @inject PreferencesService Prefs
 @inject SelectionService Selection
 @inject DownloadService Downloads
+@inject ZoomService Zoom
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -19,6 +20,10 @@
              OnViewModeChanged="SetViewMode"
              OnItemSizeChanged="SetItemSize"
              OnSortChanged="SetSort"
+             ZoomPercent="Zoom.Percent"
+             OnZoomIncrease="Zoom.IncreaseAsync"
+             OnZoomDecrease="Zoom.DecreaseAsync"
+             OnZoomReset="Zoom.ResetAsync"
              FilterText="@_filterText"
              OnFilterChanged="text => _filterText = text"
              OnSearch="RunSearchAsync"
@@ -107,11 +112,15 @@
     protected override async Task OnInitializedAsync()
     {
         Selection.Changed += OnSelectionChanged;
+        Zoom.Changed += OnZoomChanged;
         await Prefs.LoadAsync();
+        await Zoom.LoadAsync();
         await LoadAsync(CurrentPath);
     }
 
     private void OnSelectionChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnZoomChanged() => InvokeAsync(StateHasChanged);
 
     protected override async Task OnParametersSetAsync()
     {
@@ -272,5 +281,6 @@
     public void Dispose()
     {
         Selection.Changed -= OnSelectionChanged;
+        Zoom.Changed -= OnZoomChanged;
     }
 }

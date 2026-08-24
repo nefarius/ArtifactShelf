@@ -19,6 +19,7 @@
     --header-text: #f5f5f5;
     --radius: 4px;
     --folder-color: #dfa543;
+    --ui-scale: 1;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -45,7 +46,7 @@ html, body {
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-sans);
-    font-size: 13px;
+    font-size: calc(13px * var(--ui-scale, 1));
 }
 
 #app, .app-shell {
@@ -71,6 +72,15 @@ a {
     font-size: 1rem;
     font-weight: 600;
     letter-spacing: 0.02em;
+}
+
+.app-header__title:focus:not(:focus-visible) {
+    outline: none;
+}
+
+.app-header__title:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
 }
 
 /* Toolbar */
@@ -123,6 +133,21 @@ a {
 .toolbar__btn.is-active {
     background: var(--accent);
     color: var(--accent-contrast);
+}
+
+.toolbar__btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.toolbar__btn:disabled:hover {
+    background: var(--bg-elevated);
+}
+
+.toolbar__zoom-value {
+    min-width: 3.2rem;
+    justify-content: center;
+    font-variant-numeric: tabular-nums;
 }
 
 .toolbar__input {
@@ -194,7 +219,7 @@ a {
 }
 
 .sidebar {
-    width: 240px;
+    width: calc(240rem / 13);
     flex-shrink: 0;
     border-right: 1px solid var(--border);
     background: var(--bg-elevated);
@@ -239,7 +264,7 @@ a {
 }
 
 .metadata-panel {
-    width: 260px;
+    width: calc(260rem / 13);
     flex-shrink: 0;
     border-left: 1px solid var(--border);
     background: var(--bg-elevated);
@@ -395,15 +420,15 @@ a {
 }
 
 .items-tiles--small {
-    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(calc(80rem / 13), 1fr));
 }
 
 .items-tiles--medium {
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(calc(110rem / 13), 1fr));
 }
 
 .items-tiles--large {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(calc(150rem / 13), 1fr));
 }
 
 .tile {
@@ -427,7 +452,7 @@ a {
 
 .tile__thumb {
     width: 100%;
-    max-height: 90px;
+    max-height: calc(90rem / 13);
     object-fit: cover;
     border-radius: var(--radius);
     background: var(--border);

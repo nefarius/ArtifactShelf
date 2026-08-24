@@ -1,5 +1,6 @@
 @namespace ArtifactBrowser.Client.Components
 @using ArtifactBrowser.Client.Services
+@using ArtifactBrowser.Client.Utilities
 
 <div class="toolbar" role="toolbar" aria-label="Browser toolbar">
     <button type="button" class="toolbar__btn" title="Toggle sidebar" @onclick="() => OnToggleSidebar.InvokeAsync()">
@@ -28,6 +29,17 @@
             }
         </div>
     }
+
+    <div class="toolbar__group" role="group" aria-label="Page zoom">
+        <button type="button" class="toolbar__btn" title="Decrease zoom" aria-label="Decrease zoom"
+                disabled="@(!UiScale.CanDecrease(ZoomPercent))" @onclick="() => OnZoomDecrease.InvokeAsync()">−</button>
+        <button type="button" class="toolbar__btn toolbar__zoom-value"
+                title="@($"Reset zoom (currently {ZoomPercent}%)")"
+                aria-label="@($"Reset zoom (currently {ZoomPercent}%)")"
+                @onclick="() => OnZoomReset.InvokeAsync()">@ZoomPercent%</button>
+        <button type="button" class="toolbar__btn" title="Increase zoom" aria-label="Increase zoom"
+                disabled="@(!UiScale.CanIncrease(ZoomPercent))" @onclick="() => OnZoomIncrease.InvokeAsync()">+</button>
+    </div>
 
     <select class="toolbar__select" value="@Preferences.SortField" @onchange="OnSortFieldChanged" aria-label="Sort by">
         @foreach (var field in Enum.GetValues<SortField>())
@@ -79,6 +91,18 @@
 
     [Parameter]
     public EventCallback<string> OnSearch { get; set; }
+
+    [Parameter]
+    public int ZoomPercent { get; set; } = UiScale.DefaultPercent;
+
+    [Parameter]
+    public EventCallback OnZoomIncrease { get; set; }
+
+    [Parameter]
+    public EventCallback OnZoomDecrease { get; set; }
+
+    [Parameter]
+    public EventCallback OnZoomReset { get; set; }
 
     [Parameter]
     public EventCallback OnToggleSidebar { get; set; }

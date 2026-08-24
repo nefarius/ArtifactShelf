@@ -1,3 +1,7 @@
+export function applyUiScale(multiplier) {
+  document.documentElement.style.setProperty("--ui-scale", String(multiplier));
+}
+
 export function getItem(key) {
   try {
     return window.localStorage.getItem(key);

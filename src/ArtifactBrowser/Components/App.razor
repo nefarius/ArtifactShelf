@@ -8,6 +8,30 @@
     <ResourcePreloader />
     <link rel="stylesheet" href="@Assets["css/app.css"]" />
     <link rel="stylesheet" href="@Assets["ArtifactBrowser.styles.css"]" />
+    <script>
+        (function () {
+            var key = "artifact-browser.ui-scale";
+            var raw = "";
+            try {
+                raw = localStorage.getItem(key) || "";
+            } catch (e) { }
+            var n = 100;
+            var trimmed = String(raw).trim();
+            if (/^[+-]?\d+$/.test(trimmed)) {
+                var parsed = Number(trimmed);
+                if (parsed >= -2147483648 && parsed <= 2147483647) {
+                    n = parsed;
+                    n = Math.round(n / 10) * 10;
+                    if (n < 80) {
+                        n = 80;
+                    } else if (n > 200) {
+                        n = 200;
+                    }
+                }
+            }
+            document.documentElement.style.setProperty("--ui-scale", String(n / 100));
+        })();
+    </script>
     <ImportMap />
     <HeadOutlet @rendermode="@RenderMode" />
     @* HeadOutlet must not be the last head child. WASM patches it with insertBefore
