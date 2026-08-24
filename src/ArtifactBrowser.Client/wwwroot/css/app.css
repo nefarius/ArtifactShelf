@@ -194,6 +194,7 @@ a {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
+    font: inherit;
 }
 
 .breadcrumb__segment:hover {
