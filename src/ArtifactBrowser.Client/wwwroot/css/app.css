@@ -416,6 +416,7 @@ a {
 /* Grid/icon views */
 .items-tiles {
     --tile-icon: calc(72rem / 13);
+
     display: grid;
     gap: 0.6rem;
     padding: 0.75rem;
@@ -423,16 +424,19 @@ a {
 
 .items-tiles--small {
     --tile-icon: calc(48rem / 13);
+
     grid-template-columns: repeat(auto-fill, calc(80rem / 13));
 }
 
 .items-tiles--medium {
     --tile-icon: calc(72rem / 13);
+
     grid-template-columns: repeat(auto-fill, calc(110rem / 13));
 }
 
 .items-tiles--large {
     --tile-icon: calc(112rem / 13);
+
     grid-template-columns: repeat(auto-fill, calc(150rem / 13));
 }
 
