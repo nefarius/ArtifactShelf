@@ -1,4 +1,4 @@
-# <img src="assets/NSS-Vibe.png" height="180" align="left" />ArtifactShelf
+# <img src="assets/NSS-Vibe.png" height="200" align="left" />ArtifactShelf
 
 [![Docker Image CI](https://github.com/nefarius/ArtifactShelf/actions/workflows/docker-image.yml/badge.svg)](https://github.com/nefarius/ArtifactShelf/actions/workflows/docker-image.yml)
 [![Assisted by Cursor AI](https://img.shields.io/badge/Assisted%20by-Cursor%20AI-8B5CF6?style=flat)](https://cursor.com/)
