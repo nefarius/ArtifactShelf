@@ -1,5 +1,8 @@
 # <img src="assets/NSS-Vibe.png" height="180" align="left" />ArtifactShelf
 
+[![Docker Image CI](https://github.com/nefarius/ArtifactShelf/actions/workflows/docker-image.yml/badge.svg)](https://github.com/nefarius/ArtifactShelf/actions/workflows/docker-image.yml)
+[![Assisted by Cursor AI](https://img.shields.io/badge/Assisted%20by-Cursor%20AI-8B5CF6?style=flat)](https://cursor.com/)
+
 A containerized, **read-only**, [h5ai](https://larsjung.de/h5ai/)-inspired file browser for exposing a
 directory of build artifacts, releases, or documentation over HTTP. Built with **.NET 10**, an
 ASP.NET Core host, and a **Blazor WebAssembly** frontend — the browser owns all UI state in the
