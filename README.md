@@ -186,9 +186,11 @@ directly to the Internet** — clients could spoof those headers. To turn them o
 
 ## Operational updates
 
-- Bump the base images in `Dockerfile` (`mcr.microsoft.com/dotnet/sdk:10.0` /
-  `mcr.microsoft.com/dotnet/aspnet:10.0`) periodically for security patches; both are pinned to
-  the `10.0` minor tag so patch releases are picked up automatically on rebuild.
+- Keep the ASP.NET Core / Blazor WebAssembly package references, `global.json` SDK pin
+  (`10.0.400`), and Dockerfile base images (`mcr.microsoft.com/dotnet/sdk:10.0.400` /
+  `mcr.microsoft.com/dotnet/aspnet:10.0.11`) on the same .NET security servicing release.
+  Bump those pins together when a new patch lands; the floating `10.0` tags are intentionally
+  avoided so rebuilds stay reproducible.
 - The thumbnail cache in `/cache` is safe to delete at any time — it will be regenerated
   on demand (bounded by `MaxConcurrentThumbnails`).
 - Because the app is stateless (no database, no session state), scaling out is just a matter of
