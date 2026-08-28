@@ -20,7 +20,7 @@
     <PackageReference Include="Nefarius.Utilities.AspNetCore" Version="2.9.0" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
     <ProjectReference Include="..\ArtifactBrowser.Client\ArtifactBrowser.Client.csproj" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.9" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.11" />
   </ItemGroup>
 
 </Project>
