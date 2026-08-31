@@ -1,0 +1,45 @@
+# Coordinated weekly updates for every dependency surface in this repo.
+# The .NET group keeps global.json, NuGet packages, and Dockerfile images
+# on the same security servicing release (see README "Operational updates").
+version: 2
+
+multi-ecosystem-groups:
+  dotnet:
+    schedule:
+      interval: weekly
+
+updates:
+  - package-ecosystem: dotnet-sdk
+    directory: /
+    target-branch: master
+    open-pull-requests-limit: 5
+    patterns:
+      - "*"
+    multi-ecosystem-group: dotnet
+
+  - package-ecosystem: nuget
+    directory: /
+    target-branch: master
+    open-pull-requests-limit: 5
+    patterns:
+      - "*"
+    multi-ecosystem-group: dotnet
+
+  - package-ecosystem: docker
+    directory: /
+    target-branch: master
+    open-pull-requests-limit: 5
+    patterns:
+      - "*"
+    multi-ecosystem-group: dotnet
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: master
+    open-pull-requests-limit: 5
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
