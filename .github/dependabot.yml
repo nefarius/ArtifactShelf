@@ -1,0 +1,50 @@
+# Coordinated weekly updates for every dependency surface in this repo.
+# The .NET group keeps global.json, ASP.NET Core / Blazor packages, and
+# Dockerfile images on the same security servicing release (see README
+# "Operational updates"). Other NuGet packages stay out of that group.
+version: 2
+
+multi-ecosystem-groups:
+  dotnet:
+    schedule:
+      interval: weekly
+    target-branch: master
+    open-pull-requests-limit: 5
+
+updates:
+  - package-ecosystem: dotnet-sdk
+    directory: /
+    patterns:
+      - "*"
+    multi-ecosystem-group: dotnet
+
+  - package-ecosystem: nuget
+    directory: /
+    patterns:
+      - "Microsoft.AspNetCore.*"
+    multi-ecosystem-group: dotnet
+    schedule:
+      interval: weekly
+    groups:
+      nuget-third-party:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "Microsoft.AspNetCore.*"
+
+  - package-ecosystem: docker
+    directory: /
+    patterns:
+      - "*"
+    multi-ecosystem-group: dotnet
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: master
+    open-pull-requests-limit: 5
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
