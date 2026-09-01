@@ -26,11 +26,23 @@ public sealed class ApiIntegrationTests : IDisposable
                 {
                     ["ArtifactBrowser:ContentRoot"] = _root.ContentRoot,
                     ["ArtifactBrowser:CacheRoot"] = _root.CacheRoot,
+                    ["ArtifactBrowser:HeaderTitle"] = null,
+                    ["ArtifactBrowser:DocumentTitle"] = null,
                 });
             });
         });
 
         _client = _factory.CreateClient();
+    }
+
+    [Fact]
+    public async Task Config_WhenUnset_ReturnsDefaultBrandTitles()
+    {
+        var config = await _client.GetFromJsonAsync<UiConfigDto>("/api/config");
+
+        Assert.NotNull(config);
+        Assert.Equal(UiConfigDto.DefaultBrandTitle, config!.HeaderTitle);
+        Assert.Equal(UiConfigDto.DefaultBrandTitle, config.DocumentTitle);
     }
 
     [Fact]
@@ -269,10 +281,85 @@ public sealed class ApiIntegrationTests : IDisposable
         Assert.Equal("# Title\n\nSome **text**.\n", await reader.ReadToEndAsync());
     }
 
+    [Fact]
+    public async Task Config_WhenOverriddenIndependently_ReturnsConfiguredValues()
+    {
+        using var factory = CreateFactory(new Dictionary<string, string?>
+        {
+            ["ArtifactBrowser:HeaderTitle"] = "My Header",
+            ["ArtifactBrowser:DocumentTitle"] = "My Tab",
+        });
+        using var client = factory.CreateClient();
+
+        var config = await client.GetFromJsonAsync<UiConfigDto>("/api/config");
+
+        Assert.NotNull(config);
+        Assert.Equal("My Header", config!.HeaderTitle);
+        Assert.Equal("My Tab", config.DocumentTitle);
+    }
+
+    [Fact]
+    public async Task Config_WhenBlank_FallsBackToDefaultBrandTitles()
+    {
+        using var factory = CreateFactory(new Dictionary<string, string?>
+        {
+            ["ArtifactBrowser:HeaderTitle"] = "   ",
+            ["ArtifactBrowser:DocumentTitle"] = "",
+        });
+        using var client = factory.CreateClient();
+
+        var config = await client.GetFromJsonAsync<UiConfigDto>("/api/config");
+
+        Assert.NotNull(config);
+        Assert.Equal(UiConfigDto.DefaultBrandTitle, config!.HeaderTitle);
+        Assert.Equal(UiConfigDto.DefaultBrandTitle, config.DocumentTitle);
+    }
+
+    [Fact]
+    public async Task PrettyUrl_WhenDocumentTitleOverridden_RendersConfiguredTitleInShell()
+    {
+        using var factory = CreateFactory(new Dictionary<string, string?>
+        {
+            ["ArtifactBrowser:DocumentTitle"] = "My Shelf",
+        });
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/docs");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("<title>My Shelf</title>", body);
+        Assert.DoesNotContain("<title>Artifact Browser</title>", body);
+    }
+
     public void Dispose()
     {
         _client.Dispose();
         _factory.Dispose();
         _root.Dispose();
+    }
+
+    private WebApplicationFactory<Program> CreateFactory(Dictionary<string, string?> extra)
+    {
+        var values = new Dictionary<string, string?>
+        {
+            ["ArtifactBrowser:ContentRoot"] = _root.ContentRoot,
+            ["ArtifactBrowser:CacheRoot"] = _root.CacheRoot,
+            ["ArtifactBrowser:HeaderTitle"] = null,
+            ["ArtifactBrowser:DocumentTitle"] = null,
+        };
+
+        foreach (var (key, value) in extra)
+        {
+            values[key] = value;
+        }
+
+        return new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureAppConfiguration((_, config) =>
+            {
+                config.AddInMemoryCollection(values);
+            });
+        });
     }
 }

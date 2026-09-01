@@ -10,6 +10,7 @@ builder.Services.AddScoped(_ => new HttpClient
 });
 
 builder.Services.AddScoped<FilesApiClient>();
+builder.Services.AddScoped<AppConfigService>();
 builder.Services.AddScoped<PreferencesService>();
 builder.Services.AddScoped<SelectionService>();
 builder.Services.AddScoped<LocalStorageService>();

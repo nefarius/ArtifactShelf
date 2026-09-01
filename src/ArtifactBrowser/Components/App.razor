@@ -1,4 +1,8 @@
-﻿<!DOCTYPE html>
+﻿@using ArtifactBrowser.Options
+@using Microsoft.Extensions.Options
+@inject IOptions<ArtifactBrowserOptions> BrowserOptions
+
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -37,7 +41,7 @@
     @* HeadOutlet must not be the last head child. WASM patches it with insertBefore
        against the next sibling; if that sibling is missing (or a browser extension
        mutated the end of <head>), rendering throws and the error UI appears. *@
-    <title>Artifact Browser</title>
+    <title>@BrowserOptions.Value.ResolvedDocumentTitle</title>
 </head>
 
 <body>

@@ -56,6 +56,8 @@ convention, e.g. `ArtifactBrowser__ContentRoot=/data`.
 | `ThumbnailCacheMaxAgeDays` | `30` | How long a cached thumbnail remains valid before being regenerated. |
 | `DirectoryListingCacheSeconds` | `5` | How long directory listings may be served from a short-lived in-memory cache. |
 | `DefaultViewMode` / `DefaultSortField` / `DefaultSortDescending` / `DefaultItemSize` | `Details` / `Name` / `false` / `Medium` | Initial UI defaults; the browser persists the user's own choices to `localStorage` afterwards. |
+| `HeaderTitle` | `Artifact Browser` | Optional override for the top-left header label. |
+| `DocumentTitle` | `Artifact Browser` | Optional override for the HTML document-title base. Nested folders still use `{folder} — {DocumentTitle}`. |
 
 Public HTTP endpoints under `/api/files/*` are also protected by fixed-window rate limiting
 (120 req/10s general, 20 req/30s for thumbnails and ZIP archives per client IP) to bound abuse.

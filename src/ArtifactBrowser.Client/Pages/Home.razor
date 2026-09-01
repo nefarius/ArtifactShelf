@@ -2,6 +2,7 @@
 @page "/{*Path}"
 @using ArtifactBrowser.Client.Services
 @inject FilesApiClient Api
+@inject AppConfigService Config
 @inject PreferencesService Prefs
 @inject SelectionService Selection
 @inject DownloadService Downloads
@@ -9,11 +10,11 @@
 @inject NavigationManager Nav
 @implements IDisposable
 
-<PageTitle>@(CurrentPath.Length == 0 ? "Artifact Browser" : $"{System.IO.Path.GetFileName(CurrentPath)} — Artifact Browser")</PageTitle>
+<PageTitle>@(CurrentPath.Length == 0 ? Config.DocumentTitle : $"{System.IO.Path.GetFileName(CurrentPath)} — {Config.DocumentTitle}")</PageTitle>
 
 <div class="app-shell">
     <header class="app-header">
-        <h1 class="app-header__title">Artifact Browser</h1>
+        <h1 class="app-header__title">@Config.HeaderTitle</h1>
     </header>
 
     <Toolbar Preferences="Prefs.Preferences"
@@ -113,9 +114,16 @@
     {
         Selection.Changed += OnSelectionChanged;
         Zoom.Changed += OnZoomChanged;
+        _ = LoadBrandingAsync();
         await Prefs.LoadAsync();
         await Zoom.LoadAsync();
         await LoadAsync(CurrentPath);
+    }
+
+    private async Task LoadBrandingAsync()
+    {
+        await Config.LoadAsync();
+        await InvokeAsync(StateHasChanged);
     }
 
     private void OnSelectionChanged() => InvokeAsync(StateHasChanged);
