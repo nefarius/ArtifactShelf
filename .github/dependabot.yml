@@ -8,20 +8,18 @@ multi-ecosystem-groups:
   dotnet:
     schedule:
       interval: weekly
+    target-branch: master
+    open-pull-requests-limit: 5
 
 updates:
   - package-ecosystem: dotnet-sdk
     directory: /
-    target-branch: master
-    open-pull-requests-limit: 5
     patterns:
       - "*"
     multi-ecosystem-group: dotnet
 
   - package-ecosystem: nuget
     directory: /
-    target-branch: master
-    open-pull-requests-limit: 5
     patterns:
       - "Microsoft.AspNetCore.*"
     multi-ecosystem-group: dotnet
@@ -36,8 +34,6 @@ updates:
 
   - package-ecosystem: docker
     directory: /
-    target-branch: master
-    open-pull-requests-limit: 5
     patterns:
       - "*"
     multi-ecosystem-group: dotnet
