@@ -1,4 +1,5 @@
 using System.Threading.RateLimiting;
+using ArtifactBrowser.Client.Models;
 using ArtifactBrowser.Components;
 using ArtifactBrowser.Features.Files;
 using ArtifactBrowser.Options;
@@ -101,6 +102,12 @@ app.UseRequestTimeouts();
 app.UseRateLimiter();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" })).ExcludeFromDescription();
+app.MapGet("/api/config", (Microsoft.Extensions.Options.IOptions<ArtifactBrowserOptions> options) =>
+    Results.Ok(new UiConfigDto
+    {
+        HeaderTitle = options.Value.ResolvedHeaderTitle,
+        DocumentTitle = options.Value.ResolvedDocumentTitle,
+    })).ExcludeFromDescription();
 
 app.UseMiddleware<FilesExceptionMiddleware>();
 app.MapFilesEndpoints()

@@ -109,3 +109,13 @@ public sealed class ApiErrorDto
 
     public string? Code { get; set; }
 }
+
+/// <summary>Client-safe UI configuration resolved from the server <c>ArtifactBrowser</c> section.</summary>
+public sealed class UiConfigDto
+{
+    public const string DefaultBrandTitle = "Artifact Browser";
+
+    public string HeaderTitle { get; set; } = DefaultBrandTitle;
+
+    public string DocumentTitle { get; set; } = DefaultBrandTitle;
+}

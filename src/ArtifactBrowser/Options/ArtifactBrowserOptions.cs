@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using ArtifactBrowser.Client.Models;
 
 namespace ArtifactBrowser.Options;
 
@@ -94,4 +95,19 @@ public sealed class ArtifactBrowserOptions
 
     /// <summary>Default icon/grid item size ("Small", "Medium", "Large").</summary>
     public string DefaultItemSize { get; set; } = "Medium";
+
+    /// <summary>Optional override for the top-left header label. Blank or omitted uses <see cref="UiConfigDto.DefaultBrandTitle"/>.</summary>
+    [MaxLength(200)]
+    public string? HeaderTitle { get; set; }
+
+    /// <summary>Optional override for the HTML document-title base. Blank or omitted uses <see cref="UiConfigDto.DefaultBrandTitle"/>. Nested folders still use <c>{folder} — {DocumentTitle}</c>.</summary>
+    [MaxLength(200)]
+    public string? DocumentTitle { get; set; }
+
+    public string ResolvedHeaderTitle => ResolveBrandTitle(HeaderTitle);
+
+    public string ResolvedDocumentTitle => ResolveBrandTitle(DocumentTitle);
+
+    internal static string ResolveBrandTitle(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? UiConfigDto.DefaultBrandTitle : value.Trim();
 }
