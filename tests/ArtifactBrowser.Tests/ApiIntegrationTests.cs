@@ -26,6 +26,8 @@ public sealed class ApiIntegrationTests : IDisposable
                 {
                     ["ArtifactBrowser:ContentRoot"] = _root.ContentRoot,
                     ["ArtifactBrowser:CacheRoot"] = _root.CacheRoot,
+                    ["ArtifactBrowser:HeaderTitle"] = null,
+                    ["ArtifactBrowser:DocumentTitle"] = null,
                 });
             });
         });
@@ -343,6 +345,8 @@ public sealed class ApiIntegrationTests : IDisposable
         {
             ["ArtifactBrowser:ContentRoot"] = _root.ContentRoot,
             ["ArtifactBrowser:CacheRoot"] = _root.CacheRoot,
+            ["ArtifactBrowser:HeaderTitle"] = null,
+            ["ArtifactBrowser:DocumentTitle"] = null,
         };
 
         foreach (var (key, value) in extra)

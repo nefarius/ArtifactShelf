@@ -114,10 +114,16 @@
     {
         Selection.Changed += OnSelectionChanged;
         Zoom.Changed += OnZoomChanged;
-        await Config.LoadAsync();
+        _ = LoadBrandingAsync();
         await Prefs.LoadAsync();
         await Zoom.LoadAsync();
         await LoadAsync(CurrentPath);
+    }
+
+    private async Task LoadBrandingAsync()
+    {
+        await Config.LoadAsync();
+        await InvokeAsync(StateHasChanged);
     }
 
     private void OnSelectionChanged() => InvokeAsync(StateHasChanged);
