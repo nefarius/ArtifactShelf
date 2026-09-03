@@ -15,7 +15,7 @@
 <div class="app-shell">
     <header class="app-header">
         <h1 class="app-header__title">@Config.HeaderTitle</h1>
-        @if (Config.ShowGitHubLink)
+        @if (_configLoaded && Config.ShowGitHubLink)
         {
             <a class="app-header__github"
                href="@UiConfigDto.GitHubRepositoryUrl"
@@ -122,6 +122,7 @@
     private FileEntryDto? _previewEntry;
     private string? _indexMarkdown;
     private int _requestVersion;
+    private bool _configLoaded;
 
     protected override async Task OnInitializedAsync()
     {
@@ -136,6 +137,7 @@
     private async Task LoadBrandingAsync()
     {
         await Config.LoadAsync();
+        _configLoaded = true;
         await InvokeAsync(StateHasChanged);
     }
 
