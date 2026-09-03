@@ -107,6 +107,7 @@ app.MapGet("/api/config", (Microsoft.Extensions.Options.IOptions<ArtifactBrowser
     {
         HeaderTitle = options.Value.ResolvedHeaderTitle,
         DocumentTitle = options.Value.ResolvedDocumentTitle,
+        ShowGitHubLink = options.Value.ShowGitHubLink,
     })).ExcludeFromDescription();
 
 app.UseMiddleware<FilesExceptionMiddleware>();

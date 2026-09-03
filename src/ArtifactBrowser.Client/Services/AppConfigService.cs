@@ -13,6 +13,8 @@ public sealed class AppConfigService(HttpClient http)
 
     public string DocumentTitle { get; private set; } = UiConfigDto.DefaultBrandTitle;
 
+    public bool ShowGitHubLink { get; private set; } = true;
+
     public async Task LoadAsync(CancellationToken ct = default)
     {
         try
@@ -32,6 +34,8 @@ public sealed class AppConfigService(HttpClient http)
             {
                 DocumentTitle = config.DocumentTitle.Trim();
             }
+
+            ShowGitHubLink = config.ShowGitHubLink;
         }
         catch (Exception)
         {

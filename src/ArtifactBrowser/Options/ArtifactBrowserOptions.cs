@@ -104,6 +104,9 @@ public sealed class ArtifactBrowserOptions
     [MaxLength(200)]
     public string? DocumentTitle { get; set; }
 
+    /// <summary>When true, the header shows a GitHub icon linking to the ArtifactShelf repository.</summary>
+    public bool ShowGitHubLink { get; set; } = true;
+
     public string ResolvedHeaderTitle => ResolveBrandTitle(HeaderTitle);
 
     public string ResolvedDocumentTitle => ResolveBrandTitle(DocumentTitle);

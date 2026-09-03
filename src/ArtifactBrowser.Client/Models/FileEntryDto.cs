@@ -115,7 +115,11 @@ public sealed class UiConfigDto
 {
     public const string DefaultBrandTitle = "Artifact Browser";
 
+    public const string GitHubRepositoryUrl = "https://github.com/nefarius/ArtifactShelf";
+
     public string HeaderTitle { get; set; } = DefaultBrandTitle;
 
     public string DocumentTitle { get; set; } = DefaultBrandTitle;
+
+    public bool ShowGitHubLink { get; set; } = true;
 }
