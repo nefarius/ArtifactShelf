@@ -318,7 +318,7 @@ a {
 .content__index-header .toolbar__btn svg {
     width: 0.85rem;
     height: 0.85rem;
-    fill: currentColor;
+    fill: currentcolor;
     transition: transform 0.1s ease;
 }
 
