@@ -117,7 +117,23 @@ dotnet test tests/ArtifactBrowser.Tests
 
 ## Docker / Compose deployment
 
-Build and run the container:
+Published images are on Docker Hub as
+[`containinger/artifactshelf`](https://hub.docker.com/r/containinger/artifactshelf).
+Pushing a version tag (`v1.2.3`) always publishes `1.2.3`. The moving tags `1.2`,
+`1`, and `latest` are updated only when that release is the newest in that channel
+(and never for pre-releases).
+
+```bash
+docker pull containinger/artifactshelf:latest
+# or pin a release: docker pull containinger/artifactshelf:1.2.3
+
+docker run --rm -p 8080:8080 \
+  -v /path/to/your/artifacts:/data:ro \
+  -v artifact-browser-cache:/cache \
+  containinger/artifactshelf:latest
+```
+
+To build locally instead:
 
 ```bash
 docker build -t artifact-browser .

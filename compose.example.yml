@@ -5,6 +5,10 @@
 #
 #   docker compose -f compose.example.yml up -d --build
 #
+# For production you can skip the local build and pull the published image
+# instead, e.g. replace the `build:` block with:
+#   image: containinger/artifactshelf:latest
+#
 services:
   artifact-browser:
     build:
