@@ -119,7 +119,9 @@ dotnet test tests/ArtifactBrowser.Tests
 
 Published images are on Docker Hub as
 [`containinger/artifactshelf`](https://hub.docker.com/r/containinger/artifactshelf).
-Pushing a version tag (`v1.2.3`) publishes `1.2.3`, `1.2`, `1`, and `latest`.
+Pushing a version tag (`v1.2.3`) always publishes `1.2.3`. The moving tags `1.2`,
+`1`, and `latest` are updated only when that release is the newest in that channel
+(and never for pre-releases).
 
 ```bash
 docker pull containinger/artifactshelf:latest
