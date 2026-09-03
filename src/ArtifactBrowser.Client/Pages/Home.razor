@@ -80,14 +80,29 @@
             }
             else
             {
-                <div class="content__split@(_indexMarkdown is not null ? " content__split--with-index" : "")">
+                <div class="content__split@(_indexMarkdown is not null && Prefs.Preferences.ShowIndexMarkdown ? " content__split--with-index" : "")">
                     <div class="content__listing">
                         <ItemsView Entries="_entries" Preferences="Prefs.Preferences" FilterText="@_filterText" OnOpen="OpenEntryAsync" />
                     </div>
                     @if (_indexMarkdown is not null)
                     {
-                        <section class="content__index" aria-label="Folder readme">
-                            <MarkdownView Content="@_indexMarkdown" />
+                        <section class="content__index@(Prefs.Preferences.ShowIndexMarkdown ? "" : " content__index--collapsed")" aria-label="Folder readme">
+                            <header class="content__index-header">
+                                <span class="content__index-title">index.md</span>
+                                <button type="button" class="toolbar__btn"
+                                        title="@(Prefs.Preferences.ShowIndexMarkdown ? "Hide folder readme" : "Show folder readme")"
+                                        aria-label="@(Prefs.Preferences.ShowIndexMarkdown ? "Hide folder readme" : "Show folder readme")"
+                                        aria-expanded="@(Prefs.Preferences.ShowIndexMarkdown.ToString().ToLowerInvariant())"
+                                        @onclick="ToggleIndexMarkdown">
+                                    <svg viewBox="0 0 24 24" class="@(Prefs.Preferences.ShowIndexMarkdown ? "is-open" : "")" focusable="false" aria-hidden="true">
+                                        <path d="M7 10l5 5 5-5z"/>
+                                    </svg>
+                                </button>
+                            </header>
+                            @if (Prefs.Preferences.ShowIndexMarkdown)
+                            {
+                                <MarkdownView Content="@_indexMarkdown" />
+                            }
                         </section>
                     }
                 </div>
@@ -260,6 +275,8 @@
     });
 
     private Task ToggleSidebar() => Prefs.UpdateAsync(p => p.ShowSidebar = !p.ShowSidebar);
+
+    private Task ToggleIndexMarkdown() => Prefs.UpdateAsync(p => p.ShowIndexMarkdown = !p.ShowIndexMarkdown);
 
     private async Task RunSearchAsync(string query)
     {
