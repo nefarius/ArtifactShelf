@@ -19,6 +19,7 @@ services:
       # Optional: branding overrides (default is "Artifact Browser").
       # ArtifactBrowser__HeaderTitle: My Builds
       # ArtifactBrowser__DocumentTitle: My Builds
+      # ArtifactBrowser__ShowGitHubLink: "false"
       TZ: Etc/UTC
       # Optional: override Serilog/W3C retention from Nefarius.Utilities.AspNetCore.
       # WebApplicationBuilderOptions__W3C__RetainedFileCountLimit: "12"

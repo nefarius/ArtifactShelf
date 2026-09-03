@@ -43,6 +43,7 @@ public sealed class ApiIntegrationTests : IDisposable
         Assert.NotNull(config);
         Assert.Equal(UiConfigDto.DefaultBrandTitle, config!.HeaderTitle);
         Assert.Equal(UiConfigDto.DefaultBrandTitle, config.DocumentTitle);
+        Assert.True(config.ShowGitHubLink);
     }
 
     [Fact]
@@ -296,6 +297,22 @@ public sealed class ApiIntegrationTests : IDisposable
         Assert.NotNull(config);
         Assert.Equal("My Header", config!.HeaderTitle);
         Assert.Equal("My Tab", config.DocumentTitle);
+        Assert.True(config.ShowGitHubLink);
+    }
+
+    [Fact]
+    public async Task Config_WhenShowGitHubLinkDisabled_ReturnsFalse()
+    {
+        using var factory = CreateFactory(new Dictionary<string, string?>
+        {
+            ["ArtifactBrowser:ShowGitHubLink"] = "false",
+        });
+        using var client = factory.CreateClient();
+
+        var config = await client.GetFromJsonAsync<UiConfigDto>("/api/config");
+
+        Assert.NotNull(config);
+        Assert.False(config!.ShowGitHubLink);
     }
 
     [Fact]

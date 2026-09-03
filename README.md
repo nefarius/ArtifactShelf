@@ -61,6 +61,7 @@ convention, e.g. `ArtifactBrowser__ContentRoot=/data`.
 | `DefaultViewMode` / `DefaultSortField` / `DefaultSortDescending` / `DefaultItemSize` | `Details` / `Name` / `false` / `Medium` | Initial UI defaults; the browser persists the user's own choices to `localStorage` afterwards. |
 | `HeaderTitle` | `Artifact Browser` | Optional override for the top-left header label. |
 | `DocumentTitle` | `Artifact Browser` | Optional override for the HTML document-title base. Nested folders still use `{folder} — {DocumentTitle}`. |
+| `ShowGitHubLink` | `true` | When true, the header shows a GitHub icon linking to the ArtifactShelf repository. |
 
 Public HTTP endpoints under `/api/files/*` are also protected by fixed-window rate limiting
 (120 req/10s general, 20 req/30s for thumbnails and ZIP archives per client IP) to bound abuse.
