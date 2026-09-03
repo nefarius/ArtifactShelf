@@ -9,6 +9,9 @@ ASP.NET Core host, and a **Blazor WebAssembly** frontend — the browser owns al
 client, while a small set of stateless, hardened server endpoints expose only the mounted artifact
 tree and bounded derived content (previews, thumbnails, ZIP downloads).
 
+> [!NOTE]
+> Ahoy, traveler! 👋 This project has been "vibe-coded", meaning that the vast majority of the code has been written with the assistance of AI coding agents. I use my own work in production and value stability and security. Bear in mind, though, that the code you browse might not be an accurate reflection of my personal "style" or taste. The primary goal was to make a useful product, quickly, rather than focus on the development process itself. With that out of the way, if you find it useful, feel free to get inspired by it 😁
+
 ```mermaid
 flowchart LR
     Browser[Blazor WASM browser] -->|"JSON metadata and previews"| Api[ASP.NET Core API]
