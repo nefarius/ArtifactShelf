@@ -19,6 +19,8 @@ public sealed class BrowserPreferences
     public ItemSize ItemSize { get; set; } = ItemSize.Medium;
 
     public bool ShowSidebar { get; set; } = true;
+
+    public bool ShowIndexMarkdown { get; set; } = true;
 }
 
 /// <summary>Owns display preferences for the browsing UI and persists them to localStorage.</summary>
