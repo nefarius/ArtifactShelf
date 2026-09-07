@@ -107,7 +107,9 @@ A URL whose path equals the artifact virtual path is a direct download — the s
 h5ai-style host. `curl`, CI scripts, and `HttpClient` can fetch
 `/builds/HidHide/latest/bin/Release/x64/HidHideClient.exe` (or a hidden sidecar such as
 `.HidHideClient.exe.json`) and receive the file bytes. A directory URL still opens the
-browser UI.
+browser UI. A missing path returns HTTP 404 for clients that do not send `Accept: text/html`
+(so scripts do not save the file-browser page as the expected file); a browser navigation
+to the same URL still renders the file browser.
 
 Run the test suite:
 

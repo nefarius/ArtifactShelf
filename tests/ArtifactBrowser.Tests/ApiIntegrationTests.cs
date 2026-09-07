@@ -200,6 +200,31 @@ public sealed class ApiIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task PrettyUrl_MissingFile_WithoutHtmlAccept_ReturnsNotFound()
+    {
+        var response = await _client.GetAsync("/docs/does-not-exist.txt");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("blazor.web.js", body);
+        Assert.DoesNotContain("Artifact Browser", body);
+    }
+
+    [Fact]
+    public async Task PrettyUrl_MissingFile_WithHtmlAccept_ReturnsSpaShell()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/docs/does-not-exist.txt");
+        request.Headers.Accept.ParseAdd("text/html");
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("blazor.web.js", body);
+    }
+
+    [Fact]
     public async Task PrettyUrl_NestedFile_ReturnsFileBytes()
     {
         var response = await _client.GetAsync("/builds/v1/build.log");
