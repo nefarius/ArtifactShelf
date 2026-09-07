@@ -89,7 +89,12 @@ else
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
-app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+// Only rewrite 4xx/5xx to the Blazor /not-found page for browser navigations.
+// Automated clients (curl, iwr, HttpClient) must keep an empty 404 so they do
+// not save HTML as a missing artifact file.
+app.UseWhen(
+    context => HtmlAccept.PrefersHtml(context.Request),
+    branch => branch.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true));
 app.UseHttpsRedirection();
 
 app.UseAntiforgery();
@@ -116,7 +121,8 @@ app.MapFilesEndpoints()
     .WithRequestTimeout("files");
 
 // Pretty URLs that map to a real file (including hidden/dotfile names) are served as downloads
-// so curl and scripts keep working. Directories and missing paths fall through to the SPA.
+// so curl and scripts keep working. Directories and browser navigations to missing paths
+// fall through to the SPA; automation requesting a missing path gets a real 404.
 app.MapDirectArtifactFiles()
     .RequireRateLimiting("files")
     .WithRequestTimeout("files");

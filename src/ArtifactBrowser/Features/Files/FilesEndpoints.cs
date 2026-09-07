@@ -89,7 +89,8 @@ public static class FilesEndpoints
 
     /// <summary>
     /// Serves an existing artifact file at its natural URL so curl, scripts, and browsers can
-    /// download it without going through <c>/api/files/raw</c>. Directories fall through to the SPA.
+    /// download it without going through <c>/api/files/raw</c>. Directories and browser
+    /// navigations to missing paths fall through to the SPA; non-HTML clients get 404.
     /// </summary>
     public static IEndpointConventionBuilder MapDirectArtifactFiles(this IEndpointRouteBuilder app)
     {

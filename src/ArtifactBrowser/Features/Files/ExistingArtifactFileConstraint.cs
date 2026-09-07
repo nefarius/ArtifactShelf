@@ -1,8 +1,9 @@
 namespace ArtifactBrowser.Features.Files;
 
 /// <summary>
-/// Matches a catch-all route only when the path is an existing file under the content root
-/// (including hidden names). Directories and missing paths fall through to the SPA.
+/// Matches a catch-all route when the path is an existing file under the content root
+/// (including hidden names), or a missing path requested by a non-HTML client.
+/// Directories and browser navigations to missing paths fall through to the SPA.
 /// Traversal/symlink-escape attempts match so the endpoint can return 400.
 /// </summary>
 public sealed class ExistingArtifactFileConstraint : IRouteConstraint
@@ -26,7 +27,18 @@ public sealed class ExistingArtifactFileConstraint : IRouteConstraint
         try
         {
             var resolved = pathGuard.Resolve(path, allowHidden: true);
-            return File.Exists(resolved.PhysicalPath);
+            if (File.Exists(resolved.PhysicalPath))
+            {
+                return true;
+            }
+
+            if (Directory.Exists(resolved.PhysicalPath))
+            {
+                return false;
+            }
+
+            // Missing file or folder: browsers still get the SPA; automation gets 404.
+            return !HtmlAccept.PrefersHtml(httpContext.Request);
         }
         catch (PathAccessDeniedException)
         {
