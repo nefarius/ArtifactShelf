@@ -1,6 +1,8 @@
-﻿@using ArtifactBrowser.Options
+@using ArtifactBrowser.Features.Files
+@using ArtifactBrowser.Options
 @using Microsoft.Extensions.Options
 @inject IOptions<ArtifactBrowserOptions> BrowserOptions
+@inject SocialEmbedService SocialEmbeds
 
 <!DOCTYPE html>
 <html lang="en">
@@ -41,7 +43,26 @@
     @* HeadOutlet must not be the last head child. WASM patches it with insertBefore
        against the next sibling; if that sibling is missing (or a browser extension
        mutated the end of <head>), rendering throws and the error UI appears. *@
-    <title>@BrowserOptions.Value.ResolvedDocumentTitle</title>
+    @if (Embed is { } embed)
+    {
+        <meta property="og:title" content="@embed.Title" />
+        <meta property="og:description" content="@embed.Description" />
+        <meta property="og:url" content="@embed.Url" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="@embed.SiteName" />
+        @if (embed.ImageUrl is { } imageUrl)
+        {
+            <meta property="og:image" content="@imageUrl" />
+        }
+        <meta name="twitter:card" content="@embed.TwitterCard" />
+        <meta name="twitter:title" content="@embed.Title" />
+        <meta name="twitter:description" content="@embed.Description" />
+        <title>@embed.DocumentTitle</title>
+    }
+    else
+    {
+        <title>@BrowserOptions.Value.ResolvedDocumentTitle</title>
+    }
 </head>
 
 <body>
@@ -50,6 +71,12 @@
 </body>
 
 @code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    private SocialEmbed? Embed =>
+        HttpContext is null ? null : SocialEmbeds.DescribeFolder(HttpContext.Request);
+
     // The browser owns all UI state; server-side prerendering is disabled so that page
     // components (which depend on WASM-only services) never execute on the server.
     private static readonly IComponentRenderMode RenderMode = new InteractiveWebAssemblyRenderMode(prerender: false);

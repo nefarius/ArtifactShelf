@@ -89,7 +89,8 @@ public static class FilesEndpoints
 
     /// <summary>
     /// Serves an existing artifact file at its natural URL so curl, scripts, and browsers can
-    /// download it without going through <c>/api/files/raw</c>. Directories and browser
+    /// download it without going through <c>/api/files/raw</c>. Known social-unfurl crawlers
+    /// receive a small Open Graph HTML card instead of the raw bytes. Directories and browser
     /// navigations to missing paths fall through to the SPA; non-HTML clients get 404.
     /// </summary>
     public static IEndpointConventionBuilder MapDirectArtifactFiles(this IEndpointRouteBuilder app)
@@ -99,7 +100,15 @@ public static class FilesEndpoints
         return app.MapMethods(
             "/{**artifactPath:artifactFile}",
             new[] { HttpMethods.Get, HttpMethods.Head },
-            (string artifactPath, bool? download, PathGuard pathGuard) =>
-                ArtifactFileResult.FromVirtualPath(artifactPath, download == true, pathGuard));
+            (string artifactPath, bool? download, HttpContext context, PathGuard pathGuard, SocialEmbedService embeds) =>
+            {
+                if (SocialCrawler.IsUnfurlBot(context.Request)
+                    && embeds.TryDescribeFile(artifactPath, context.Request) is { } embed)
+                {
+                    return embed.ToHtmlResult();
+                }
+
+                return ArtifactFileResult.FromVirtualPath(artifactPath, download == true, pathGuard);
+            });
     }
 }

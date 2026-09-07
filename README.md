@@ -111,6 +111,12 @@ browser UI. A missing path returns HTTP 404 for clients that do not send `Accept
 (so scripts do not save the file-browser page as the expected file); a browser navigation
 to the same URL still renders the file browser.
 
+Pretty folder and file links also expose [Open Graph](https://ogp.me/) / Twitter Card tags so
+Discord, Slack, and similar clients can unfurl a preview of what is behind the link. Folder
+URLs include the folder name in the HTML shell. Direct file URLs still return raw bytes to
+browsers and `curl`; only known social-crawler user agents receive a small HTML card with the
+file name, type, size, and modified time (and a thumbnail URL for images).
+
 Run the test suite:
 
 ```powershell

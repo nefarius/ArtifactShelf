@@ -33,6 +33,7 @@ builder.Services.AddDataProtection()
 
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<PathGuard>();
+builder.Services.AddSingleton<SocialEmbedService>();
 builder.Services.AddScoped<FileSystemBrowser>();
 builder.Services.AddScoped<PreviewService>();
 builder.Services.AddSingleton<ThumbnailService>();
