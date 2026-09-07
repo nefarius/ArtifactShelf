@@ -370,8 +370,89 @@ public sealed class ApiIntegrationTests : IDisposable
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("<title>My Shelf</title>", body);
+        Assert.Contains("<title>docs", body);
+        Assert.Contains("My Shelf</title>", body);
         Assert.DoesNotContain("<title>Artifact Browser</title>", body);
+    }
+
+    [Fact]
+    public async Task PrettyUrl_Directory_IncludesOpenGraphFolderName()
+    {
+        var response = await _client.GetAsync("/docs");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("blazor.web.js", body);
+        Assert.Contains("property=\"og:title\"", body);
+        Assert.Contains("content=\"docs\"", body);
+        Assert.Contains("<title>docs", body);
+        Assert.Contains("Artifact Browser", body);
+        Assert.Contains("Artifact Browser | /docs", body);
+    }
+
+    [Fact]
+    public async Task PrettyUrl_File_WhenDiscordbot_ReturnsOpenGraphHtml()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/docs/notes.txt");
+        request.Headers.TryAddWithoutValidation(
+            "User-Agent",
+            "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)");
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("property=\"og:title\"", body);
+        Assert.Contains("content=\"notes.txt\"", body);
+        Assert.Contains("12 B", body);
+        Assert.Contains("Code", body);
+        Assert.DoesNotContain("hello world", body);
+        Assert.DoesNotContain("blazor.web.js", body);
+    }
+
+    [Fact]
+    public async Task PrettyUrl_File_WithoutCrawlerUserAgent_StillReturnsFileBytes()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/docs/notes.txt");
+        request.Headers.TryAddWithoutValidation("User-Agent", "curl/8.5.0");
+
+        var response = await _client.SendAsync(request);
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("text/plain", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("hello world\n", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task PrettyUrl_File_WhenDiscordbotHead_ReturnsHtmlContentType()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Head, "/docs/notes.txt");
+        request.Headers.TryAddWithoutValidation(
+            "User-Agent",
+            "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)");
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
+        Assert.Empty(await response.Content.ReadAsByteArrayAsync());
+    }
+
+    [Fact]
+    public async Task PrettyUrl_MissingFile_WhenDiscordbotWithoutHtmlAccept_ReturnsNotFound()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/docs/does-not-exist.txt");
+        request.Headers.TryAddWithoutValidation(
+            "User-Agent",
+            "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)");
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("blazor.web.js", body);
+        Assert.DoesNotContain("og:title", body);
     }
 
     public void Dispose()
