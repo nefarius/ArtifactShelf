@@ -1,6 +1,10 @@
 @namespace ArtifactBrowser.Client.Components
 @using ArtifactBrowser.Client.Services
+@using ArtifactBrowser.Client.Utilities
 @inject FilesApiClient Api
+@inject NavigationManager Nav
+@inject ClipboardService Clipboard
+@inject DownloadService Downloads
 
 <li class="tree-node" role="treeitem" aria-expanded="@Expanded.ToString().ToLowerInvariant()">
     <div class="tree-node__row @(IsActive ? "is-active" : "")">
@@ -14,7 +18,9 @@
         {
             <span class="tree-node__toggle tree-node__toggle--spacer"></span>
         }
-        <button type="button" class="tree-node__label" @onclick="() => OnNavigate.InvokeAsync(Node.Path)">
+        <button type="button" class="tree-node__label"
+                @onclick="() => OnNavigate.InvokeAsync(Node.Path)"
+                @oncontextmenu="OpenContextMenu" @oncontextmenu:preventDefault>
             <svg viewBox="0 0 24 24" class="tree-node__icon" focusable="false"><path d="M10 4H2v16h20V6H12l-2-2z"/></svg>
             <span>@Node.Name</span>
         </button>
@@ -36,6 +42,17 @@
             </ul>
         }
     }
+
+    <ContextMenu Open="_menuOpen" X="_menuX" Y="_menuY" OnClose="CloseMenu">
+        <li role="presentation">
+            <button type="button" class="context-menu__item@(_copyFailed ? " is-failed" : "")" role="menuitem" @onclick="CopyLinkAsync">
+                @(_copyFailed ? "Copy failed" : "Copy link")
+            </button>
+        </li>
+        <li role="presentation">
+            <button type="button" class="context-menu__item" role="menuitem" @onclick="DownloadZipAsync">Download ZIP</button>
+        </li>
+    </ContextMenu>
 </li>
 
 @code {
@@ -52,6 +69,11 @@
     private bool Loading { get; set; }
     private List<TreeNodeDto>? Children { get; set; }
     private bool IsActive => string.Equals(Node.Path, CurrentPath, StringComparison.OrdinalIgnoreCase);
+
+    private bool _menuOpen;
+    private double _menuX;
+    private double _menuY;
+    private bool _copyFailed;
 
     protected override void OnInitialized()
     {
@@ -120,5 +142,49 @@
         }
 
         return CurrentPath.StartsWith(Node.Path + "/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task OpenContextMenu(MouseEventArgs e)
+    {
+        var clientX = e.ClientX;
+        var clientY = e.ClientY;
+        _copyFailed = false;
+
+        if (clientX == 0 && clientY == 0)
+        {
+            var point = await Clipboard.GetActiveElementRectAsync();
+            clientX = point.X;
+            clientY = point.Y;
+        }
+
+        _menuX = clientX;
+        _menuY = clientY;
+        _menuOpen = true;
+    }
+
+    private void CloseMenu()
+    {
+        _menuOpen = false;
+        _copyFailed = false;
+    }
+
+    private async Task CopyLinkAsync()
+    {
+        try
+        {
+            var url = PrettyUrl.FromVirtualPath(Nav.BaseUri, Node.Path);
+            await Clipboard.CopyTextAsync(url);
+            CloseMenu();
+        }
+        catch (Exception)
+        {
+            _copyFailed = true;
+        }
+    }
+
+    private async Task DownloadZipAsync()
+    {
+        CloseMenu();
+        await Downloads.DownloadArchiveAsync(Api.GetArchiveUrl(), [Node.Path]);
     }
 }

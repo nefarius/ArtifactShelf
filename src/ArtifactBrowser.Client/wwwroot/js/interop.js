@@ -25,6 +25,71 @@ export function focusElement(selector) {
   }
 }
 
+export async function copyText(text) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {
+      // Fall through to the execCommand path when the Clipboard API is denied.
+    }
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  const ok = document.execCommand("copy");
+  textarea.remove();
+  if (!ok) {
+    throw new Error("Copy failed");
+  }
+}
+
+export function getActiveElementRect() {
+  const el = document.activeElement;
+  if (!el || el === document.body || el === document.documentElement) {
+    return { x: 8, y: 8 };
+  }
+
+  const rect = el.getBoundingClientRect();
+  return { x: rect.left, y: rect.bottom };
+}
+
+export function placeContextMenu(el, x, y) {
+  if (!el) {
+    return;
+  }
+
+  const pad = 8;
+  el.style.left = `${x}px`;
+  el.style.top = `${y}px`;
+  const rect = el.getBoundingClientRect();
+  const left = Math.max(pad, Math.min(x, window.innerWidth - rect.width - pad));
+  const top = Math.max(pad, Math.min(y, window.innerHeight - rect.height - pad));
+  el.style.left = `${left}px`;
+  el.style.top = `${top}px`;
+}
+
+export function subscribeCloseOnScroll(dotNetHelper) {
+  const handler = () => {
+    cleanup();
+    dotNetHelper.invokeMethodAsync("CloseFromJs");
+  };
+
+  function cleanup() {
+    window.removeEventListener("scroll", handler, true);
+    window.removeEventListener("resize", handler);
+  }
+
+  window.addEventListener("scroll", handler, true);
+  window.addEventListener("resize", handler);
+  return { dispose: cleanup };
+}
+
 export async function downloadViaPost(url, jsonBody, filename) {
   const response = await fetch(url, {
     method: "POST",

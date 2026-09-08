@@ -3,6 +3,9 @@
 @using ArtifactBrowser.Client.Utilities
 @inject SelectionService Selection
 @inject FilesApiClient Api
+@inject NavigationManager Nav
+@inject ClipboardService Clipboard
+@inject DownloadService Downloads
 @implements IDisposable
 
 @if (SortedEntries.Count == 0)
@@ -28,6 +31,7 @@ else if (Preferences.ViewMode == ViewMode.Details)
                 <tr class="items-table__row @(Selection.IsSelected(entry.Path) ? "is-selected" : "")"
                     tabindex="0"
                     @onclick="e => HandleClick(entry, e)" @ondblclick="() => Open(entry)"
+                    @oncontextmenu="e => OpenContextMenu(entry, e)" @oncontextmenu:preventDefault
                     @onkeydown="e => HandleKey(entry, e)">
                     <td><FileIcon Entry="entry" /></td>
                     <td>@entry.Name</td>
@@ -45,6 +49,7 @@ else
         {
             <div class="tile @(Selection.IsSelected(entry.Path) ? "is-selected" : "")" tabindex="0"
                  @onclick="e => HandleClick(entry, e)" @ondblclick="() => Open(entry)"
+                 @oncontextmenu="e => OpenContextMenu(entry, e)" @oncontextmenu:preventDefault
                  @onkeydown="e => HandleKey(entry, e)" title="@entry.Name">
                 @if (Preferences.ViewMode == ViewMode.Icons && entry.MediaCategory == MediaCategory.Image)
                 {
@@ -60,6 +65,17 @@ else
     </div>
 }
 
+<ContextMenu Open="_menuOpen" X="_menuX" Y="_menuY" OnClose="CloseMenu">
+    <li role="presentation">
+        <button type="button" class="context-menu__item@(_copyFailed ? " is-failed" : "")" role="menuitem" @onclick="CopyLinkAsync">
+            @(_copyFailed ? "Copy failed" : "Copy link")
+        </button>
+    </li>
+    <li role="presentation">
+        <button type="button" class="context-menu__item" role="menuitem" @onclick="DownloadZipAsync">Download ZIP</button>
+    </li>
+</ContextMenu>
+
 @code {
     [Parameter, EditorRequired]
     public List<FileEntryDto> Entries { get; set; } = new();
@@ -72,6 +88,12 @@ else
 
     [Parameter]
     public EventCallback<FileEntryDto> OnOpen { get; set; }
+
+    private bool _menuOpen;
+    private double _menuX;
+    private double _menuY;
+    private FileEntryDto? _menuEntry;
+    private bool _copyFailed;
 
     private bool HasFilter => !string.IsNullOrWhiteSpace(FilterText);
 
@@ -113,6 +135,11 @@ else
 
     private Task HandleKey(FileEntryDto entry, KeyboardEventArgs e)
     {
+        if (e.Key == "ContextMenu" || (e.ShiftKey && e.Key == "F10"))
+        {
+            return OpenContextMenu(entry, clientX: 0, clientY: 0);
+        }
+
         if (e.Key is not ("Enter" or " "))
         {
             return Task.CompletedTask;
@@ -132,6 +159,72 @@ else
         {
             Selection.Select(entry.Path);
         }
+    }
+
+    private void ApplyContextSelection(FileEntryDto entry)
+    {
+        if (!Selection.IsSelected(entry.Path))
+        {
+            Selection.Select(entry.Path);
+        }
+    }
+
+    private Task OpenContextMenu(FileEntryDto entry, MouseEventArgs e) =>
+        OpenContextMenu(entry, e.ClientX, e.ClientY);
+
+    private async Task OpenContextMenu(FileEntryDto entry, double clientX, double clientY)
+    {
+        ApplyContextSelection(entry);
+        _menuEntry = entry;
+        _copyFailed = false;
+
+        if (clientX == 0 && clientY == 0)
+        {
+            var point = await Clipboard.GetActiveElementRectAsync();
+            clientX = point.X;
+            clientY = point.Y;
+        }
+
+        _menuX = clientX;
+        _menuY = clientY;
+        _menuOpen = true;
+    }
+
+    private void CloseMenu()
+    {
+        _menuOpen = false;
+        _copyFailed = false;
+    }
+
+    private async Task CopyLinkAsync()
+    {
+        if (_menuEntry is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var url = PrettyUrl.FromVirtualPath(Nav.BaseUri, _menuEntry.Path);
+            await Clipboard.CopyTextAsync(url);
+            CloseMenu();
+        }
+        catch (Exception)
+        {
+            _copyFailed = true;
+        }
+    }
+
+    private async Task DownloadZipAsync()
+    {
+        if (Selection.Selected.Count == 0)
+        {
+            return;
+        }
+
+        var paths = Selection.Selected.ToList();
+        CloseMenu();
+        await Downloads.DownloadArchiveAsync(Api.GetArchiveUrl(), paths);
     }
 
     private Task Open(FileEntryDto entry) => OnOpen.InvokeAsync(entry);
