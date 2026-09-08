@@ -1,0 +1,106 @@
+@namespace ArtifactBrowser.Client.Components
+@inject IJSRuntime Js
+@implements IAsyncDisposable
+
+@if (Open)
+{
+    <div class="context-menu-layer"
+         @onclick="RequestClose"
+         @oncontextmenu="OnBackdropContextMenu"
+         @oncontextmenu:preventDefault>
+        <ul @ref="_menu"
+            class="context-menu"
+            role="menu"
+            style="@PositionStyle"
+            tabindex="-1"
+            @onclick:stopPropagation="true"
+            @oncontextmenu:stopPropagation="true"
+            @onkeydown="OnKeyDown">
+            @ChildContent
+        </ul>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool Open { get; set; }
+
+    [Parameter]
+    public double X { get; set; }
+
+    [Parameter]
+    public double Y { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private ElementReference _menu;
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _scrollSub;
+    private DotNetObjectReference<ContextMenu>? _self;
+    private bool _placed;
+    private double _placedX;
+    private double _placedY;
+
+    private string PositionStyle =>
+        $"--menu-x:{X.ToString(System.Globalization.CultureInfo.InvariantCulture)}px;" +
+        $"--menu-y:{Y.ToString(System.Globalization.CultureInfo.InvariantCulture)}px;";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!Open)
+        {
+            _placed = false;
+            await DisposeScrollAsync();
+            return;
+        }
+
+        _module ??= await Js.InvokeAsync<IJSObjectReference>("import", "./js/interop.js");
+
+        if (!_placed || _placedX != X || _placedY != Y)
+        {
+            _placed = true;
+            _placedX = X;
+            _placedY = Y;
+            await _module.InvokeVoidAsync("placeContextMenu", _menu, X, Y);
+            await _menu.FocusAsync();
+            await DisposeScrollAsync();
+            _self ??= DotNetObjectReference.Create(this);
+            _scrollSub = await _module.InvokeAsync<IJSObjectReference>("subscribeCloseOnScroll", _self);
+        }
+    }
+
+    [JSInvokable]
+    public Task CloseFromJs() => RequestClose();
+
+    private Task RequestClose() => OnClose.InvokeAsync();
+
+    private async Task OnBackdropContextMenu() => await RequestClose();
+
+    private Task OnKeyDown(KeyboardEventArgs e) =>
+        e.Key == "Escape" ? RequestClose() : Task.CompletedTask;
+
+    private async Task DisposeScrollAsync()
+    {
+        if (_scrollSub is not null)
+        {
+            await _scrollSub.DisposeAsync();
+            _scrollSub = null;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await DisposeScrollAsync();
+        _self?.Dispose();
+        _self = null;
+        if (_module is not null)
+        {
+            await _module.DisposeAsync();
+            _module = null;
+        }
+    }
+}

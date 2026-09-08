@@ -1,11 +1,10 @@
-﻿@page "/"
+@page "/"
 @page "/{*Path}"
 @using ArtifactBrowser.Client.Services
 @inject FilesApiClient Api
 @inject AppConfigService Config
 @inject PreferencesService Prefs
 @inject SelectionService Selection
-@inject DownloadService Downloads
 @inject ZoomService Zoom
 @inject NavigationManager Nav
 @implements IDisposable
@@ -43,7 +42,6 @@
              OnSearch="RunSearchAsync"
              OnToggleSidebar="ToggleSidebar"
              SelectedCount="Selection.Selected.Count"
-             OnDownloadSelected="DownloadSelectedAsync"
              OnClearSelection="() => Selection.Clear()" />
 
     <Breadcrumb CurrentPath="@CurrentPath" OnNavigate="NavigateTo" />
@@ -306,16 +304,6 @@
     {
         _isSearching = false;
         _searchResults = new List<FileEntryDto>();
-    }
-
-    private async Task DownloadSelectedAsync()
-    {
-        if (Selection.Selected.Count == 0)
-        {
-            return;
-        }
-
-        await Downloads.DownloadArchiveAsync(Api.GetArchiveUrl(), Selection.Selected.ToList());
     }
 
     public void Dispose()

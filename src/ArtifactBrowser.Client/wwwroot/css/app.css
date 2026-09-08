@@ -796,6 +796,50 @@ a {
 }
 
 /* Blazor error UI */
+/* Context menu */
+.context-menu-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+}
+
+.context-menu {
+    position: fixed;
+    left: var(--menu-x, 0);
+    top: var(--menu-y, 0);
+    margin: 0;
+    padding: 0.25rem 0;
+    list-style: none;
+    min-width: 10.5rem;
+    background: var(--bg-elevated);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+
+.context-menu__item {
+    display: block;
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    padding: 0.4rem 0.85rem;
+    font: inherit;
+    cursor: pointer;
+}
+
+.context-menu__item:hover,
+.context-menu__item:focus-visible {
+    background: var(--row-hover);
+    outline: none;
+}
+
+.context-menu__item.is-failed {
+    color: var(--text-muted);
+}
+
 #blazor-error-ui {
     color-scheme: light only;
     background: lightyellow;
