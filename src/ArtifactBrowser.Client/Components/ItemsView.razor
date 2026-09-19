@@ -22,6 +22,7 @@ else if (Preferences.ViewMode == ViewMode.Details)
                 <th></th>
                 <th scope="col">Name</th>
                 <th scope="col">Size</th>
+                <th scope="col">Downloads</th>
                 <th scope="col">Modified</th>
             </tr>
         </thead>
@@ -36,6 +37,7 @@ else if (Preferences.ViewMode == ViewMode.Details)
                     <td><FileIcon Entry="entry" /></td>
                     <td>@entry.Name</td>
                     <td class="items-table__size">@(entry.IsDirectory ? "" : FormatUtilities.FormatBytes(entry.Size))</td>
+                    <td class="items-table__downloads">@(entry.IsDirectory ? "" : FormatUtilities.FormatCount(entry.DownloadCount))</td>
                     <td class="items-table__date">@FormatUtilities.FormatDate(entry.Modified)</td>
                 </tr>
             }

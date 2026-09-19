@@ -8,13 +8,14 @@ namespace ArtifactBrowser.Tests;
 public sealed class FileSystemBrowserTests : IDisposable
 {
     private readonly TempContentRoot _root = new();
+    private readonly InMemoryDownloadCounter _counter = new();
     private readonly FileSystemBrowser _browser;
 
     public FileSystemBrowserTests()
     {
         var options = _root.CreateOptions();
         var guard = new PathGuard(options);
-        _browser = new FileSystemBrowser(guard, options, new MemoryCache(new MemoryCacheOptions()));
+        _browser = new FileSystemBrowser(guard, options, new MemoryCache(new MemoryCacheOptions()), _counter);
     }
 
     [Fact]
@@ -76,6 +77,45 @@ public sealed class FileSystemBrowserTests : IDisposable
         var result = _browser.Search(string.Empty, "hidden", recursive: true, CancellationToken.None);
 
         Assert.Empty(result.Results);
+    }
+
+    [Fact]
+    public void ListDirectory_IncludesPersistedDownloadCounts()
+    {
+        _counter.Set("README.md", 12);
+
+        var listing = _browser.ListDirectory(string.Empty);
+
+        var readme = Assert.Single(listing.Entries, e => e.Name == "README.md");
+        Assert.Equal(12, readme.DownloadCount);
+        Assert.All(listing.Entries.Where(e => e.IsDirectory), e => Assert.Equal(0, e.DownloadCount));
+    }
+
+    [Fact]
+    public void Search_IncludesPersistedDownloadCounts()
+    {
+        _counter.Set("builds/v1/build.log", 4);
+
+        var result = _browser.Search(string.Empty, "build.log", recursive: true, CancellationToken.None);
+
+        var match = Assert.Single(result.Results, r => r.Path == "builds/v1/build.log");
+        Assert.Equal(4, match.DownloadCount);
+    }
+
+    [Fact]
+    public void ListDirectory_WhenCountsUnavailable_StillReturnsEntries()
+    {
+        var options = _root.CreateOptions();
+        var browser = new FileSystemBrowser(
+            new PathGuard(options),
+            options,
+            new MemoryCache(new MemoryCacheOptions()),
+            new ThrowingDownloadCounter());
+
+        var listing = browser.ListDirectory(string.Empty);
+
+        Assert.Contains(listing.Entries, e => e.Name == "README.md");
+        Assert.All(listing.Entries, e => Assert.Equal(0, e.DownloadCount));
     }
 
     public void Dispose() => _root.Dispose();

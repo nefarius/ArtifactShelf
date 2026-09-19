@@ -9,7 +9,7 @@ namespace ArtifactBrowser.Features.Files;
 /// Read-only, hardened access to directory listings, the sidebar tree, and recursive search.
 /// All results are derived from the confined path resolved by <see cref="PathGuard"/>.
 /// </summary>
-public sealed class FileSystemBrowser(PathGuard pathGuard, IOptions<ArtifactBrowserOptions> options, IMemoryCache cache)
+public sealed class FileSystemBrowser(PathGuard pathGuard, IOptions<ArtifactBrowserOptions> options, IMemoryCache cache, IDownloadCounter downloadCounter)
 {
     private readonly ArtifactBrowserOptions _options = options.Value;
 
@@ -20,6 +20,7 @@ public sealed class FileSystemBrowser(PathGuard pathGuard, IOptions<ArtifactBrow
         var cacheKey = $"list:{resolved.VirtualPath}";
         if (cache.TryGetValue<DirectoryListingDto>(cacheKey, out var cached) && cached is not null)
         {
+            ApplyDownloadCounts(cached.Entries);
             return cached;
         }
 
@@ -57,6 +58,7 @@ public sealed class FileSystemBrowser(PathGuard pathGuard, IOptions<ArtifactBrow
         };
 
         cache.Set(cacheKey, dto, TimeSpan.FromSeconds(Math.Max(0, _options.DirectoryListingCacheSeconds)));
+        ApplyDownloadCounts(dto.Entries);
         return dto;
     }
 
@@ -162,6 +164,7 @@ public sealed class FileSystemBrowser(PathGuard pathGuard, IOptions<ArtifactBrow
                         Modified = dto.Modified,
                         Extension = dto.Extension,
                         MediaCategory = dto.MediaCategory,
+                        DownloadCount = dto.DownloadCount,
                         ParentPath = virtualDir,
                     });
                 }
@@ -175,6 +178,7 @@ public sealed class FileSystemBrowser(PathGuard pathGuard, IOptions<ArtifactBrow
 
         Walk(new DirectoryInfo(resolved.PhysicalPath), resolved.VirtualPath, 0);
 
+        ApplyDownloadCounts(results);
         return new SearchResponseDto { Results = results, Truncated = truncated };
     }
 
@@ -254,5 +258,29 @@ public sealed class FileSystemBrowser(PathGuard pathGuard, IOptions<ArtifactBrow
             Extension = extension,
             MediaCategory = isDirectory ? MediaCategory.Directory : MimeHelper.Categorize(extension),
         };
+    }
+
+    private void ApplyDownloadCounts(IEnumerable<FileEntryDto> entries)
+    {
+        var files = entries.Where(e => !e.IsDirectory).ToList();
+        if (files.Count == 0)
+        {
+            return;
+        }
+
+        IReadOnlyDictionary<string, long> counts;
+        try
+        {
+            counts = downloadCounter.GetCounts(files.ConvertAll(f => f.Path));
+        }
+        catch
+        {
+            return;
+        }
+
+        foreach (var file in files)
+        {
+            file.DownloadCount = counts.TryGetValue(file.Path, out var count) ? count : 0;
+        }
     }
 }

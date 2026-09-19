@@ -486,8 +486,13 @@ a {
     text-overflow: ellipsis;
 }
 
-.items-table__size, .items-table__date {
+.items-table__size, .items-table__date, .items-table__downloads {
     color: var(--text-muted);
+}
+
+.items-table__downloads {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
 }
 
 /* Grid/icon views */

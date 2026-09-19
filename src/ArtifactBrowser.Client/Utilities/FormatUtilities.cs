@@ -22,6 +22,8 @@ public static class FormatUtilities
         return unit == 0 ? $"{value:0} {Units[unit]}" : $"{value:0.#} {Units[unit]}";
     }
 
+    public static string FormatCount(long count) => count.ToString("N0");
+
     public static string FormatDate(DateTimeOffset value)
     {
         if (value == DateTimeOffset.MinValue)

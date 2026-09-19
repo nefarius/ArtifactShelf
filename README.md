@@ -17,7 +17,7 @@ flowchart LR
     Browser[Blazor WASM browser] -->|"JSON metadata and previews"| Api[ASP.NET Core API]
     Browser -->|"range and ZIP downloads"| Api
     Api --> ReadOnlyData[Read-only artifact mount]
-    Api --> Cache[Writable thumbnail cache]
+    Api --> Cache[Writable thumbnail and stats cache]
 ```
 
 There is **no upload, edit, or delete functionality** — this is intentionally a one-way window
@@ -43,7 +43,7 @@ convention, e.g. `ArtifactBrowser__ContentRoot=/data`.
 | Key | Default | Description |
 | --- | --- | --- |
 | `ContentRoot` | `/data` | Read-only artifact tree root that is browsed. |
-| `CacheRoot` | `/cache` | Writable cache root, used only for generated thumbnails. |
+| `CacheRoot` | `/cache` | Writable cache root for generated thumbnails and durable per-file download counts (`download-counts.db`). |
 | `HiddenPatterns` | `.*`, `Thumbs.db`, `desktop.ini`, `@eaDir`, `$RECYCLE.BIN`, `System Volume Information` | Glob patterns (matched per path segment) hidden from listings, the sidebar tree, and search. A known file URL still downloads, including dotfile sidecars. |
 | `MaxTextPreviewBytes` | `1048576` (1 MiB) | Max bytes read for a text/Markdown preview; larger files report `TooLarge`. |
 | `MaxDirectoryEntries` | `20000` | Max entries returned per directory listing. |
@@ -205,8 +205,10 @@ directly to the Internet** — clients could spoof those headers. To turn them o
   ZIP archive entry count/total size are all capped by configuration; thumbnail generation and
   ZIP streaming both run under a bounded `SemaphoreSlim` so a burst of public traffic can't
   exhaust CPU, memory, or disk.
-- **Read-only source data**: thumbnails are written only under `CacheRoot`; ZIP archives are
-  streamed directly to the HTTP response and never buffered into the artifact tree or to disk.
+- **Read-only source data**: thumbnails and download-count SQLite state are written only under
+  `CacheRoot`; ZIP archives are streamed directly to the HTTP response and never buffered into
+  the artifact tree or to disk. Download statistics are recorded after a successful file or ZIP
+  member is written, on a background worker, and can never fail or delay a download.
 - **Markdown safety**: Markdown previews are rendered client-side with raw HTML explicitly
   disabled (Markdig's `DisableHtml()`), so embedded `<script>`/HTML in artifact Markdown cannot
   execute.
@@ -222,7 +224,11 @@ directly to the Internet** — clients could spoof those headers. To turn them o
   Bump those pins together when a new patch lands; the floating `10.0` tags are intentionally
   avoided so rebuilds stay reproducible.
 - The thumbnail cache in `/cache` is safe to delete at any time — it will be regenerated
-  on demand (bounded by `MaxConcurrentThumbnails`).
-- Because the app is stateless (no database, no session state), scaling out is just a matter of
-  running multiple replicas against the same read-only `/data` mount; each replica can use its
-  own `/cache` volume.
+  on demand (bounded by `MaxConcurrentThumbnails`). Deleting `/cache` also resets per-file
+  download counts stored in `download-counts.db`.
+- File downloads and ZIP streams do not wait on statistics I/O. Counts are queued in memory
+  and flushed by a background worker; a full or failed queue drops events rather than slowing
+  or failing the download.
+- Replicas that share a `/cache` volume share download counts. Replicas with separate cache
+  volumes keep independent counts. The rest of the app remains stateless: scaling out is still
+  a matter of running multiple replicas against the same read-only `/data` mount.

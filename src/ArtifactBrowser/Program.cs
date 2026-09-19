@@ -34,6 +34,9 @@ builder.Services.AddDataProtection()
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<PathGuard>();
 builder.Services.AddSingleton<SocialEmbedService>();
+builder.Services.AddSingleton<DownloadCounterStore>();
+builder.Services.AddSingleton<IDownloadCounter>(sp => sp.GetRequiredService<DownloadCounterStore>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<DownloadCounterStore>());
 builder.Services.AddScoped<FileSystemBrowser>();
 builder.Services.AddScoped<PreviewService>();
 builder.Services.AddSingleton<ThumbnailService>();

@@ -19,9 +19,10 @@ internal sealed class ArchiveTally
 /// without buffering to disk or writing into the read-only artifact tree. Enforces entry-count
 /// and total-byte limits so a single request cannot exhaust disk, memory, or CPU.
 /// </summary>
-public sealed class ZipStreamer(PathGuard pathGuard, IOptions<ArtifactBrowserOptions> options)
+public sealed class ZipStreamer(PathGuard pathGuard, IOptions<ArtifactBrowserOptions> options, IDownloadCounter downloadCounter)
 {
     private readonly ArtifactBrowserOptions _options = options.Value;
+    private readonly IDownloadCounter _downloadCounter = downloadCounter;
     private readonly SemaphoreSlim _concurrencyLimiter = new(Math.Max(1, options.Value.MaxConcurrentZipJobs));
 
     public async Task WriteZipAsync(Stream destination, IReadOnlyList<string> virtualPaths, CancellationToken cancellationToken)
@@ -47,11 +48,11 @@ public sealed class ZipStreamer(PathGuard pathGuard, IOptions<ArtifactBrowserOpt
 
                 if (Directory.Exists(resolved.PhysicalPath))
                 {
-                    await AddDirectoryAsync(archive, resolved.PhysicalPath, tally, cancellationToken);
+                    await AddDirectoryAsync(archive, resolved.PhysicalPath, resolved.VirtualPath, tally, cancellationToken);
                 }
                 else if (File.Exists(resolved.PhysicalPath))
                 {
-                    await AddFileAsync(archive, resolved.PhysicalPath, Path.GetFileName(resolved.PhysicalPath), tally, cancellationToken);
+                    await AddFileAsync(archive, resolved.PhysicalPath, Path.GetFileName(resolved.PhysicalPath), resolved.VirtualPath, tally, cancellationToken);
                 }
             }
         }
@@ -61,7 +62,7 @@ public sealed class ZipStreamer(PathGuard pathGuard, IOptions<ArtifactBrowserOpt
         }
     }
 
-    private async Task AddDirectoryAsync(ZipArchive archive, string physicalDir, ArchiveTally tally, CancellationToken cancellationToken)
+    private async Task AddDirectoryAsync(ZipArchive archive, string physicalDir, string virtualDir, ArchiveTally tally, CancellationToken cancellationToken)
     {
         var baseName = Path.GetFileName(physicalDir.TrimEnd(Path.DirectorySeparatorChar));
         var pending = new Stack<string>();
@@ -115,7 +116,8 @@ public sealed class ZipStreamer(PathGuard pathGuard, IOptions<ArtifactBrowserOpt
                         continue;
                     }
 
-                    await AddFileAsync(archive, fileInfo.FullName, $"{baseName}/{relative}", tally, cancellationToken);
+                    var fileVirtual = string.IsNullOrEmpty(virtualDir) ? relative : $"{virtualDir}/{relative}";
+                    await AddFileAsync(archive, fileInfo.FullName, $"{baseName}/{relative}", fileVirtual, tally, cancellationToken);
                 }
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
@@ -125,7 +127,7 @@ public sealed class ZipStreamer(PathGuard pathGuard, IOptions<ArtifactBrowserOpt
         }
     }
 
-    private async Task AddFileAsync(ZipArchive archive, string physicalPath, string entryName, ArchiveTally tally, CancellationToken cancellationToken)
+    private async Task AddFileAsync(ZipArchive archive, string physicalPath, string entryName, string virtualPath, ArchiveTally tally, CancellationToken cancellationToken)
     {
         var fileInfo = new FileInfo(physicalPath);
         if (!fileInfo.Exists)
@@ -151,5 +153,14 @@ public sealed class ZipStreamer(PathGuard pathGuard, IOptions<ArtifactBrowserOpt
         await using var entryStream = entry.Open();
         await using var fileStream = new FileStream(physicalPath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 81920, useAsync: true);
         await fileStream.CopyToAsync(entryStream, cancellationToken);
+
+        try
+        {
+            _downloadCounter.RecordDownload(virtualPath);
+        }
+        catch
+        {
+            // Statistics are best-effort and must not abort an in-flight archive.
+        }
     }
 }

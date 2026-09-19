@@ -40,6 +40,9 @@ public class FileEntryDto
 
     public MediaCategory MediaCategory { get; set; }
 
+    /// <summary>Number of recorded downloads for this file. Always 0 for directories.</summary>
+    public long DownloadCount { get; set; }
+
     public bool IsDirectory => Kind == ArtifactKind.Directory;
 }
 

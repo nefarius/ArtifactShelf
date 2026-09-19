@@ -36,8 +36,8 @@ public static class FilesEndpoints
             return Results.Ok(preview);
         });
 
-        group.MapGet("/raw", (string? path, bool? download, PathGuard pathGuard) =>
-            ArtifactFileResult.FromVirtualPath(path, download == true, pathGuard));
+        group.MapGet("/raw", (string? path, bool? download, PathGuard pathGuard, IDownloadCounter downloadCounter) =>
+            ArtifactFileResult.FromVirtualPath(path, download == true, pathGuard, downloadCounter, recordDownload: download == true));
 
         group.MapGet("/thumbnail", async (string? path, ThumbnailService thumbnailService, CancellationToken ct) =>
         {
@@ -100,7 +100,7 @@ public static class FilesEndpoints
         return app.MapMethods(
             "/{**artifactPath:artifactFile}",
             new[] { HttpMethods.Get, HttpMethods.Head },
-            (string artifactPath, bool? download, HttpContext context, PathGuard pathGuard, SocialEmbedService embeds) =>
+            (string artifactPath, bool? download, HttpContext context, PathGuard pathGuard, SocialEmbedService embeds, IDownloadCounter downloadCounter) =>
             {
                 if (SocialCrawler.IsUnfurlBot(context.Request)
                     && embeds.TryDescribeFile(artifactPath, context.Request) is { } embed)
@@ -108,7 +108,12 @@ public static class FilesEndpoints
                     return embed.ToHtmlResult();
                 }
 
-                return ArtifactFileResult.FromVirtualPath(artifactPath, download == true, pathGuard);
+                return ArtifactFileResult.FromVirtualPath(
+                    artifactPath,
+                    download == true,
+                    pathGuard,
+                    downloadCounter,
+                    recordDownload: HttpMethods.IsGet(context.Request.Method));
             });
     }
 }
