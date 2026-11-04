@@ -56,6 +56,23 @@ public sealed class FileSystemBrowserTests : IDisposable
     }
 
     [Fact]
+    public void GetTreeNode_OrdersChildrenNaturallyAndSetsModified()
+    {
+        var builds = Path.Combine(_root.ContentRoot, "builds");
+        var older = Path.Combine(builds, "v2.2.0");
+        Directory.CreateDirectory(Path.Combine(builds, "v2.10.0"));
+        Directory.CreateDirectory(older);
+        var expected = new DateTimeOffset(2024, 6, 15, 12, 30, 0, TimeSpan.Zero);
+        Directory.SetLastWriteTimeUtc(older, expected.UtcDateTime);
+
+        var tree = _browser.GetTreeNode("builds");
+
+        Assert.Equal(new[] { "v1", "v2.2.0", "v2.10.0" }, tree.Children.Select(child => child.Name));
+        var match = Assert.Single(tree.Children, child => child.Name == "v2.2.0");
+        Assert.Equal(expected.ToUnixTimeSeconds(), match.Modified.ToUnixTimeSeconds());
+    }
+
+    [Fact]
     public void Search_Recursive_FindsNestedMatches()
     {
         var result = _browser.Search(string.Empty, "build.log", recursive: true, CancellationToken.None);

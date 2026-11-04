@@ -1,4 +1,5 @@
 using ArtifactBrowser.Client.Models;
+using ArtifactBrowser.Client.Utilities;
 using ArtifactBrowser.Options;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
@@ -85,6 +86,7 @@ public sealed class FileSystemBrowser(PathGuard pathGuard, IOptions<ArtifactBrow
                 Name = entry.Name,
                 Path = childVirtual,
                 HasChildren = HasAnySubdirectory(di),
+                Modified = ReadModified(di),
             });
         }
 
@@ -93,7 +95,7 @@ public sealed class FileSystemBrowser(PathGuard pathGuard, IOptions<ArtifactBrow
             Name = resolved.VirtualPath.Length == 0 ? "/" : Path.GetFileName(resolved.VirtualPath),
             Path = resolved.VirtualPath,
             HasChildren = children.Count > 0,
-            Children = children.OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase).ToList(),
+            Children = children.OrderBy(c => c.Name, NaturalSortComparer.Instance).ToList(),
         };
     }
 
@@ -225,6 +227,18 @@ public sealed class FileSystemBrowser(PathGuard pathGuard, IOptions<ArtifactBrow
         }
 
         return safe;
+    }
+
+    private static DateTimeOffset ReadModified(FileSystemInfo entry)
+    {
+        try
+        {
+            return entry.LastWriteTimeUtc;
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+        {
+            return DateTimeOffset.MinValue;
+        }
     }
 
     private static FileEntryDto ToDto(FileSystemInfo entry, string parentVirtualPath)

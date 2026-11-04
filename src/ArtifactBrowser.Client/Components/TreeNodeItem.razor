@@ -35,9 +35,9 @@
         else if (Children is { Count: > 0 })
         {
             <ul role="group">
-                @foreach (var child in Children)
+                @foreach (var child in SortedChildren)
                 {
-                    <TreeNodeItem Node="child" CurrentPath="@CurrentPath" OnNavigate="OnNavigate" />
+                    <TreeNodeItem @key="child.Path" Node="child" CurrentPath="@CurrentPath" Preferences="Preferences" OnNavigate="OnNavigate" />
                 }
             </ul>
         }
@@ -62,8 +62,21 @@
     [Parameter, EditorRequired]
     public string CurrentPath { get; set; } = string.Empty;
 
+    [Parameter, EditorRequired]
+    public BrowserPreferences Preferences { get; set; } = null!;
+
     [Parameter]
     public EventCallback<string> OnNavigate { get; set; }
+
+    private List<TreeNodeDto> SortedChildren => EntrySorter.Sort(
+        Children ?? [],
+        _ => true,
+        node => node.Name,
+        node => node.Modified,
+        _ => null,
+        _ => string.Empty,
+        Preferences.SortField,
+        Preferences.SortDescending);
 
     private bool Expanded { get; set; }
     private bool Loading { get; set; }

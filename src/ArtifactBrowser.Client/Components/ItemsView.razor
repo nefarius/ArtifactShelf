@@ -104,29 +104,15 @@ else
         : Entries;
 
     // Folders always sort before files; within each group, sort by the selected field/direction.
-    private List<FileEntryDto> SortedEntries => ApplySortDirection(FilteredEntries);
-
-    private List<FileEntryDto> ApplySortDirection(List<FileEntryDto> filtered)
-    {
-        IOrderedEnumerable<FileEntryDto> ordered = Preferences.SortField switch
-        {
-            SortField.Size => filtered.OrderBy(e => e.IsDirectory ? 0 : 1).ThenBy(e => e.Size ?? -1),
-            SortField.Modified => filtered.OrderBy(e => e.IsDirectory ? 0 : 1).ThenBy(e => e.Modified),
-            SortField.Type => filtered.OrderBy(e => e.IsDirectory ? 0 : 1).ThenBy(e => e.Extension, StringComparer.OrdinalIgnoreCase),
-            _ => filtered.OrderBy(e => e.IsDirectory ? 0 : 1).ThenBy(e => e.Name, NaturalSortComparer.Instance),
-        };
-
-        var result = ordered.ToList();
-        if (!Preferences.SortDescending)
-        {
-            return result;
-        }
-
-        var dirCount = result.Count(e => e.IsDirectory);
-        var dirs = Enumerable.Reverse(result.Take(dirCount));
-        var files = Enumerable.Reverse(result.Skip(dirCount));
-        return dirs.Concat(files).ToList();
-    }
+    private List<FileEntryDto> SortedEntries => EntrySorter.Sort(
+        FilteredEntries,
+        entry => entry.IsDirectory,
+        entry => entry.Name,
+        entry => entry.Modified,
+        entry => entry.Size,
+        entry => entry.Extension,
+        Preferences.SortField,
+        Preferences.SortDescending);
 
     protected override void OnInitialized() => Selection.Changed += OnSelectionChanged;
 

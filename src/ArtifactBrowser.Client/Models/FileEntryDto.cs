@@ -65,6 +65,8 @@ public sealed class TreeNodeDto
 
     public bool HasChildren { get; set; }
 
+    public DateTimeOffset Modified { get; set; }
+
     public List<TreeNodeDto> Children { get; set; } = new();
 }
 
